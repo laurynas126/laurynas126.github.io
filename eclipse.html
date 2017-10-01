@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Canvas demo</title>
+    <style>
+        .outer {
+            display: table;
+            position: absolute;
+            height: 100%;
+            width: 100%;
+        }
+
+        .middle {
+            display: table-cell;
+            vertical-align: middle;
+        }
+
+        .inner {
+            width: 100%;
+            text-align: center;
+        }
+
+        .special-button{
+            border: none;
+            background-color: inherit;
+            color: rgba(0, 0, 0, 0.49);
+        }
+
+        canvas {
+            display: inline;
+            border: 0px solid;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="inner">
+        <canvas id="canvas"></canvas>
+    </div>
+    <br>
+    <button class="special-button" onclick="hide()">Hide</button>
+    <div id="panel">
+        <button onclick="reset()">Reset</button>
+        <label>Vel X:</label>
+        <input type="number" id="velx" value="0.2" step="0.01"/>    
+        <label>Vel Y:</label>
+        <input type="number" id="vely" value="0.12" step="0.01"/>    
+        <label>Moon radius:</label>
+        <input type="number" id="radius" value="22"/>
+    </div>
+    <script>
+        document.getElementById("canvas").setAttribute("width", screen.width*0.9);
+        document.getElementById("canvas").setAttribute("height", screen.height*0.9);
+        var HEIGHT = Number(document.getElementById("canvas").getAttribute("height"));
+        var WIDTH = Number(document.getElementById("canvas").getAttribute("width"));
+        var ctx = document.getElementById("canvas").getContext("2d");
+        var red = 135;//190
+        var green = 206;//226
+        var blue = 250;//255
+        var moonStartX = WIDTH / 2 - 125;
+        var moonStartY = HEIGHT / 2 - 75;
+        var velX = Number(document.getElementById("velx").value);
+        var velY = Number(document.getElementById("vely").value);
+        var sun = { x: WIDTH / 2, y: HEIGHT / 2, radius: 20, color: "yellow" };
+        var moon = { x: moonStartX, y: moonStartY, radius: Number(document.getElementById("radius").value), color: "grey" };
+        var starArray = [];
+        // var moon = {x : WIDTH/2 - 500, y : HEIGHT/2 - 300, radius: 20, color: "grey"};
+
+        function hide(){
+            if (document.getElementById("panel").hidden){
+                return document.getElementById("panel").hidden = false;
+            }
+            document.getElementById("panel").hidden = true;
+        }
+        function reset(){
+            moon.x = moonStartX;
+            moon.y = moonStartY;
+            moon.radius = Number(document.getElementById("radius").value);
+            velX = Number(document.getElementById("velx").value);
+            velY = Number(document.getElementById("vely").value);
+            changeColors(1);
+        }
+
+        init();
+
+        function init() {
+            for (var index = 0; index < 200; index++) {
+                var x = Math.floor(Math.random() * (WIDTH - 10) + 10);
+                var y = Math.floor(Math.random() * (HEIGHT - 10) + 10);
+                var star = { x: x, y: y };
+                starArray.push(star);
+            }
+            return setInterval(draw, 10);
+        }
+        function draw() {
+            ctx.clearRect(0, 0, WIDTH, HEIGHT);
+            collision(moon, sun);
+            drawGradientSun();
+            drawCircle(sun);
+            drawCircle(moon);
+            moon.x += velX;
+            moon.y += velY;
+            document.body.setAttribute("style", `background-color:rgb(${red},${green},${blue})`);
+        }
+
+        function drawGradientSun(){
+            var grd = ctx.createRadialGradient(sun.x, sun.y, 10, sun.x,sun.y, 27);
+            grd.addColorStop(0, "yellow");
+            grd.addColorStop(1, `rgb(${red},${green},${blue})`);
+            ctx.fillStyle = grd;
+            ctx.fillRect(sun.x-100, sun.y-100, 200, 200);
+        }
+
+        // http://jsfiddle.net/gQ3hD/2/
+        function collision(draw1, draw2) {
+            var x = -1;
+            var y = -1;
+
+            var dx = (draw1.x) - (draw2.x);
+            var dy = (draw1.y) - (draw2.y);
+            var distance = Math.sqrt(dx * dx + dy * dy);
+            if (distance < draw1.radius + draw2.radius) {
+                if (distance + draw1.radius < draw2.radius) {
+                    distance = draw1.radius;
+                    // console.log("moon fully in sun" );
+                }
+                else if (draw1.radius > distance + draw2.radius) {
+                    distance = draw2.radius;
+                }
+                else {
+                    distance = Math.max(0, draw1.radius - distance, draw2.radius - distance);
+                }
+                // console.log(distance);
+                //visibility -- between 0 and 1 - what part of the sun is not covered
+                var visibility = (Math.PI * draw2.radius * draw2.radius - Math.PI * distance * distance) / (Math.PI * draw2.radius * draw2.radius);
+                //cannot have more than 1 or negative visibility
+                if (visibility > 1 || visibility < 0) {
+                    visibility = 1;
+                }
+                //Total eclipse
+                if (visibility < 0.05) {
+                    drawStars();
+                }
+                changeColors(visibility);
+                if (visibility < 1) {
+                    //console.log(visibility);
+                }
+
+            }
+        }
+        //Dim the background depending on the visibility
+        function changeColors(value) {
+            value = Math.sqrt(value);
+            red = Math.floor(135 * value);
+            green = Math.floor(206 * value);
+            blue = Math.floor(250 * value);
+        }
+
+        function drawCircle(drawing) {
+            ctx.beginPath();
+            ctx.fillStyle = drawing.color;
+            ctx.arc(drawing.x, drawing.y, drawing.radius, 0, Math.PI * 2);
+            ctx.closePath();
+            ctx.fill();
+        }
+
+        function drawStars() {
+            ctx.fillStyle = "white";
+            for (var index = 0; index < starArray.length; index++) {
+                ctx.fillRect(starArray[index].x, starArray[index].y, 1, 1);
+
+            }
+        }
+    </script>
+</body>
+
+</html>

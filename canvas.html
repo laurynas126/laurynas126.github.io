@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<title>Canvas</title>
+	<script src="jquery-3.2.1.min.js"></script>
+	<style>
+		canvas{
+			border: 1px black solid;
+		}
+	</style>
+</head>
+
+<body>	
+	<canvas id="canvas" width="700" height="500"></canvas>
+	<script>
+		init();
+
+		var stop = false;
+
+		var x = 50.1;
+		var y = 50;
+		var dx = 2.0;
+		var dy = 4.0;
+		var WIDTH;
+		var HEIGHT;
+		var radius = 10;
+		var ctx;
+
+		function init() {
+			var canvas =  document.getElementById("canvas");
+			ctx = canvas.getContext("2d");
+			WIDTH = canvas.width;
+			HEIGHT = canvas.height;
+			ctx.fillStyle = "#FF1C0A";
+			return setInterval(gravityDraw, 10);
+			//   return setInterval(draw, 10);
+		}
+
+		function circle(x, y, r) {
+			ctx.beginPath();
+			ctx.arc(x, y, r, 0, Math.PI * 2, true);
+			ctx.closePath();
+			ctx.fill();
+		}
+
+		function rect(x, y, w, h) {
+			ctx.beginPath();
+			ctx.rect(x, y, w, h);
+			ctx.closePath();
+			ctx.fill();
+		}
+
+		function clear() {
+			ctx.clearRect(0, 0, WIDTH, HEIGHT);
+		}
+
+		function gravityDraw() {
+			clear();
+			if (!stop) {
+				dy = dy + 0.2;
+			}
+			if (stop) {
+				friction();
+			}
+			if (x + dx > WIDTH || x + dx < 0) {
+				dx = -dx;
+			}
+			if (Math.abs(dy) < 1.5 && y > HEIGHT * 0.97) {
+				dy = 0;
+				y = HEIGHT - radius;
+				stop = true;
+			}
+			if (y + dy > HEIGHT || y + dy < 0) {
+				dy = -dy * 0.9;
+			}
+			
+			circle(x, y, radius);
+			x += dx;
+			y += dy;
+		}
+
+		function friction() {
+			if (Math.abs(dx) > 0.1) {
+				dx = dx * 0.996;
+			}
+			else {
+				dx = 0;
+				clearInterval(gravityDraw);
+			}
+		}
+		function draw() {
+			ctx.fillStyle = "#FF1C0A"; //nuspalvinti
+
+			clear();
+			circle(x, y, 10);
+			if (dx == 0) {
+				dx = 1;
+			}
+
+			if (x + dx > WIDTH || x + dx < 0) {
+				var multiplier = 1;
+				if (dx > 0) {
+					multiplier = -1;
+				}
+				dx = multiplier * (4 + (Math.random() * 2 - 1));
+			}
+
+			if (y + dy > HEIGHT || y + dy < 0) {
+				dy = -dy * 1.01;
+			}
+
+			x += dx;
+			y += dy;
+			// ctx.clearRect(0,0,400,400);
+			// ctx.beginPath();
+			// ctx.arc(x, y, 10, 0, Math.PI*2, true); 
+			// ctx.closePath();
+			// ctx.fill();
+			// x += dx;
+			// y += dy;
+		}
+	</script>
+</body>
+
+</html>

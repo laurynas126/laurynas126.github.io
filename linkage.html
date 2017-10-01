@@ -1,0 +1,253 @@
+<!DOCTYPE HTML>
+<html>
+
+<head>
+    <style>
+        body {
+            margin: 20px;
+            padding: 0px;
+        }
+    </style>
+</head>
+
+<body>
+    <canvas id="myCanvas" width="900" height="600"></canvas>
+    <br>
+    <label>BF</label>
+    <input type="number" id="bf" value="1" step="0.1" />
+    <label>EF</label>
+    <input type="number" id="ef" value="1.5" step="0.1" />
+    <br>
+    <input type="checkbox" id="diffAngle">Pakeisti kampa<br>
+    <br>
+    <br>
+    <button id="playbackButton" onclick="changePlayback(this)">Stop</button>
+    <script>
+        window.requestAnimFrame = (function (callback) {
+            return window.requestAnimationFrame || window.webkitRequestAnimationFrame || window.mozRequestAnimationFrame || window.oRequestAnimationFrame || window.msRequestAnimationFrame ||
+                function (callback) {
+                    window.setTimeout(callback, 1000 / 60);
+                };
+        })();
+
+
+        function getTriangleLinks(){
+            BF = Number(document.getElementById("bf").value) * multiplier;
+            EF = Number(document.getElementById("ef").value) * multiplier;
+            BE = Math.sqrt(EF ** 2 + BF ** 2);
+            EC = Math.sqrt(EF ** 2 + (BC - BF)**2);
+            CBE = Math.atan(EF / BF);
+            if (BF < 0){
+                CBE = Math.PI + CBE;
+            }
+            BEC = Math.acos(EF/EC) + (Math.PI/2 - CBE);
+            if (BC < BF){
+                BEC = -Math.acos(EF/EC) + (Math.PI/2 - CBE);
+            }
+        }
+
+        function recalculateTrajectory(array, invert){
+            for (var i = 0; i <= 360; i += 1) {
+                var alpha = -Math.PI / 180 * i;
+                var BD = Math.sqrt(AB ** 2 + AD ** 2 - 2 * AB * AD * Math.cos(alpha));
+                var cosBD = (AB ** 2 + BD ** 2 - AD ** 2) / (2 * AB * BD);
+                var beta = Math.acos(-cosBD);
+                var cosB = (BD ** 2 + BC ** 2 - CD ** 2) / (2 * BD * BC);
+                if (Math.abs(alpha) % (2 * Math.PI) > Math.PI) {
+                    beta = -beta;
+                }
+                fi = beta + invert*Math.acos(cosB)  + alpha - Math.PI - CBE;
+                var x = abLink.width * Math.cos(alpha) - BE * Math.cos(fi);
+                var y = abLink.width * Math.sin(alpha) - BE * Math.sin(fi);
+                array.push({x:x, y:y});
+            }
+        }
+
+        function lengthChanged(){
+            line1 = []
+            line2 = []
+            getTriangleLinks();
+            recalculateTrajectory(line1, -1);
+            recalculateTrajectory(line2, 1);
+        }
+
+        function drawLink(myLink, ctx) {
+            ctx.beginPath();
+            ctx.rect(0, -myLink.off, myLink.width, 2 * myLink.off);
+            ctx.fillStyle = myLink.color;
+            ctx.fill();
+            ctx.strokeStyle = 'black';
+            ctx.beginPath();
+            ctx.arc(0, 0, myLink.off + myLink.borderWidth, 0, Math.PI * 2, true);
+            ctx.stroke();
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(myLink.width, 0, myLink.off + myLink.borderWidth, 0, Math.PI * 2, true);
+            ctx.stroke();
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(0, 0, myLink.borderWidth, 0, Math.PI * 2, true);
+            ctx.fillStyle = 'black';
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(myLink.width, 0, myLink.borderWidth, 0, Math.PI * 2, true);
+            ctx.fillStyle = 'black';
+            ctx.fill();
+        }
+
+        var runTime = -1;
+        function changePlayback(button) {
+            isRunning = !isRunning;
+            if (isRunning) {
+                button.innerHTML = "Stop";
+                startTime = new Date().getTime() - runTime;
+                animate(canvas, ctx, new Date().getTime() - runTime);
+                return;
+            }
+            runTime = (new Date()).getTime() - startTime;
+            button.innerHTML = "Play";
+
+        }
+
+        function drawTrajectory(array, color) {
+            ctx.beginPath();
+            ctx.strokeStyle = color;
+            for (var i = 0; i < array.length; i++) {
+                var coordinates = array[i];
+                ctx.lineTo(coordinates.x, coordinates.y);
+            }
+            ctx.stroke();
+        }
+
+        function drawTriangle(length1, CBE, length2, BEC){
+            var thick = 7;
+            ctx.save();
+            ctx.rotate(-CBE);
+            ctx.beginPath();
+            ctx.fillStyle = "rgba(125,125,250,0.8)";
+            ctx.rect(0, -thick, length1, 2*thick);
+            
+            ctx.arc(length1, 0, thick, 0, Math.PI*2);
+            ctx.translate(length1, 0);
+            ctx.save();
+            var BF = Number(document.getElementById("bf").value) * multiplier;
+            ctx.rotate(Math.PI - BEC);
+            ctx.rect(0, -thick, length2, 2*thick);
+            ctx.fill();
+            ctx.restore();
+            ctx.fillStyle = "black";
+            ctx.fillRect(0,0,3,3);
+            ctx.restore();
+        }
+
+        function animate(canvas, ctx, startTime) {
+            if (!isRunning) {
+                return;
+            }
+            // update
+            var time = (new Date()).getTime() - startTime;
+            var t = time / 30;
+            // clear
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.save();
+            ctx.translate(canvas.width / 2 - 100, canvas.height / 2 + 100);
+            ctx.save();
+            var alpha = (-Math.PI / 180 * t) % (2 * Math.PI);
+
+            var BD = Math.sqrt(AB ** 2 + AD ** 2 - 2 * AB * AD * Math.cos(alpha));
+            var cosBD = (AB ** 2 + BD ** 2 - AD ** 2) / (2 * AB * BD);
+            var ABD = Math.acos(-cosBD); //Kampas ABD
+            var cosB = (BD ** 2 + BC ** 2 - CD ** 2) / (2 * BD * BC);//Kampas DBC
+            var DBC = Math.acos(cosB);
+            var cosC = (BC ** 2 + CD ** 2 - BD ** 2) / (2 * BC * CD);//Kampas BCD
+            var BCD = Math.acos(-cosC);
+            if (Math.abs(alpha) % (2 * Math.PI) > Math.PI) {
+                ABD = -ABD;
+            }
+            if(document.getElementById("diffAngle").checked){
+                DBC = -DBC;
+                BCD = -BCD;
+                drawTrajectory(line2, "orange");             
+            }
+            drawTrajectory(line1, "red");
+            ctx.rotate(alpha);
+            drawLink(abLink, ctx);
+            ctx.translate(abLink.width, 0);
+
+            ctx.rotate(ABD - DBC);
+            drawTriangle(BE, CBE, EC, BEC);
+            drawLink(bcLink, ctx);//BC
+
+            ctx.translate(bcLink.width, 0);
+            ctx.rotate(BCD);
+            drawLink(cdLink, ctx);//CD
+            ctx.restore(); 
+            ctx.restore();
+
+            // request new frame
+            requestAnimFrame(function () {
+                animate(canvas, ctx, startTime);
+            });
+        }
+        var canvas = document.getElementById('myCanvas');
+        var ctx = canvas.getContext('2d');
+        var line1 = []
+        var line2 = []
+        var multiplier = 40;
+        var isRunning = true;
+
+        var abLink = {
+            color: '#8ED6FF',
+            width: 4 * multiplier,
+            off: 10,
+            borderWidth: 6
+        };
+
+
+        var bcLink = {
+            color: '#DD8ED6',
+            width: 5 * multiplier,
+            off: 9,
+            borderWidth: 3
+        };
+
+        var cdLink = {
+            color: '#FF8ED6',
+            width: 4 * multiplier,
+            off: 9,
+            borderWidth: 3
+        };
+
+        var adLink = {
+            color: 'transparent',
+            width: 3 * multiplier,
+            off: 9,
+            borderWidth: 3
+        };
+
+        var bdLink = {
+            color: 'red',
+            width: 20 * multiplier,
+            off: 1,
+            borderWidth: 0
+        };
+        var AB = abLink.width;
+        var AD = adLink.width;
+        var BC = bcLink.width;
+        var CD = cdLink.width;
+        var BF = Number(document.getElementById("bf").value) * multiplier;
+        var EF = Number(document.getElementById("ef").value) * multiplier;
+        var BE = Math.sqrt(EF ** 2 + BF ** 2);
+        var EC = Math.sqrt(EF ** 2 + (BC - BF)**2);
+        var CBE = Math.atan(EF / BF);
+        var BEC = Math.acos(EF/EC) + (Math.PI/2 - CBE);
+        
+        document.getElementById("bf").addEventListener('input',lengthChanged);
+        document.getElementById("ef").addEventListener('input',lengthChanged);
+        lengthChanged();
+        var startTime = (new Date()).getTime();
+        animate(canvas, ctx, startTime);
+    </script>
+</body>
+
+</html>
