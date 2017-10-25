@@ -27,26 +27,36 @@
     <!-- Javascript code that runs our Three.js examples -->
     <script type="text/javascript">
 
+        // once everything is loaded, we run our Three.js stuff.
         var svgManager = new THREE.SVGLoader();
-        var svgUrl = 'https://klevas.mif.vu.lt/~rimask/geometrija/maze_4.svg';
-        var result = null;
+        // var svgUrl = 'https://klevas.mif.vu.lt/~rimask/geometrija/maze_4.svg';
+        var svgUrl = '/resources/maze_4.svg';
+        var svgLabyrinth = null;
+        var labyrinthMesh;
+
+        // create a scene, that will hold all our elements such as objects, cameras and lights.
         var scene = new THREE.Scene();
+        // create a camera, which defines where we're looking at.
         var camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+        // create a render and set the size
         var renderer = new THREE.WebGLRenderer();
         var clock = new THREE.Clock();
 
         var cubeFaces = [];
+        var pivot = new THREE.Group();
+
         var exploded = false;
+        var WALL_THICKNESS = 3;
 
 
 
         function buildSVG(svgDocument) {
             console.log("Loaded");
-            result = svgDocument;
-            var width = Number(result.getAttribute('width')) + 50;
-            var height = Number(result.getAttribute('height')) + 50;
+            svgLabyrinth = svgDocument;
+            var width = Number(svgLabyrinth.getAttribute('width')) + 50;
+            var height = Number(svgLabyrinth.getAttribute('height')) + 50;
             scene.add(getPlane(width / 2 - 25, height / 2 - 25, width, height));
-            var walls = result.children[2].children;
+            var walls = svgLabyrinth.children[2].children;
             var singleGeometry = new THREE.Geometry();
             for (var index = 0; index < walls.length; index++) {
                 var element = walls[index];
@@ -54,16 +64,16 @@
                 var lengthX = Number(element.getAttribute('x2')) - x;
                 var z = Number(element.getAttribute('y1'));
                 var lengthZ = Number(element.getAttribute('y2')) - z;
-                var wall = getWall(x, 5, z, lengthX, 10, lengthZ, 3);
+                var wall = getWall(x, 5, z, lengthX, 10, lengthZ, WALL_THICKNESS);
                 wall.updateMatrix(); // as needed
                 singleGeometry.merge(wall.geometry, wall.matrix);
             }
-            var boxMat = new THREE.MeshLambertMaterial({ color: 0xF6831E});
-            var mesh = new THREE.Mesh(singleGeometry, boxMat);
-            scene.add(mesh);
+            var boxMat = new THREE.MeshLambertMaterial({ color: 0xF6831E });
+            labyrinthMesh = new THREE.Mesh(singleGeometry, boxMat);
+            scene.add(labyrinthMesh);
         }
 
-        function getWall(x, y, z, lenX, lenY, lenZ, thickness){
+        function getWall(x, y, z, lenX, lenY, lenZ, thickness) {
             if (lenZ == 0) {
                 lenY = lenY + 0.1;
                 // x += thickness;
@@ -72,18 +82,19 @@
             }
             x = x + lenX / 2;
             z = z + (thickness + lenZ) / 2;
-            var boxGeom = new THREE.BoxGeometry(lenX + thickness,lenY,lenZ + thickness);
+            var boxGeom = new THREE.BoxGeometry(lenX + thickness, lenY, lenZ + thickness);
             // var boxMat = new THREE.MeshLambertMaterial({ color: 0xF6831E});
             var box = new THREE.Mesh(boxGeom);
             box.position.x = x;
             box.position.y = y;
             box.position.z = z;
-            box.castShadow = true;
+            // box.castShadow = true;
+            // box.receiveShadows = true;
             return box;
             // scene.add(box);
         }
 
-        function getPlane(x, z, width, height){
+        function getPlane(x, z, width, height) {
             var planeGeometry = new THREE.PlaneGeometry(width, height);
             var planeMaterial = new THREE.MeshLambertMaterial({ color: 0xffffff });
             var plane = new THREE.Mesh(planeGeometry, planeMaterial);
@@ -97,9 +108,9 @@
             return plane;
         }
 
-        function getSpotlight(x, y, z){
-            var spotLight = new THREE.SpotLight( 0xffffff );
-            spotLight.position.set( x, y, z );
+        function getSpotlight(x, y, z) {
+            var spotLight = new THREE.SpotLight(0xffffff);
+            spotLight.position.set(x, y, z);
             spotLight.castShadow = true;
             // spotLight.distance = 20;
             return spotLight;
@@ -107,74 +118,92 @@
 
         function getTriangle(x, y, z, lengthX, lengthY, lengthZ) {
             var geometry = new THREE.Geometry();
-            geometry.vertices.push(new THREE.Vector3(x + lengthX, y, z));
-            geometry.vertices.push(new THREE.Vector3(x, y + lengthY, z));
-            geometry.vertices.push(new THREE.Vector3(x, y , z + lengthZ));
+            geometry.vertices.push(new THREE.Vector3(0 + lengthX, 0, 0));
+            geometry.vertices.push(new THREE.Vector3(0, 0 + lengthY, 0));
+            geometry.vertices.push(new THREE.Vector3(0, 0, 0 + lengthZ));
             geometry.faces.push(new THREE.Face3(0, 1, 2));
             geometry.computeFaceNormals();
             geometry.computeVertexNormals();
             var material1 = new THREE.MeshLambertMaterial({ color: 0x00A3A3, side: THREE.DoubleSide });
             var triangle = new THREE.Mesh(geometry, material1);
+            triangle.position.x = x;
+            triangle.position.y = y;
+            triangle.position.z = z;
             triangle.castShadow = true;
             return triangle;
         }
 
-        function buildCube(x,y,z, size){
+        function buildCube(posx, posy, posz, size) {
             cubeFaces = [];
+            var x = -2.5;
+            var y = x;
+            var z = x;
             var split = 4;
             var faceLen = size / split;
             for (var index = 0; index < split; index++) {
                 for (var j = 0; j < split; j++) {
-                    cubeFaces.push(getTriangle(x + faceLen*index,y + j*faceLen, z, faceLen, faceLen, 0));
-                    cubeFaces.push(getTriangle(x + faceLen*index + faceLen ,y + j*faceLen + faceLen ,z, -faceLen, -faceLen, 0));
+                    cubeFaces.push(getTriangle(x + faceLen * index, y + j * faceLen, z, faceLen, faceLen, 0));
+                    cubeFaces.push(getTriangle(x + faceLen * index + faceLen, y + j * faceLen + faceLen, z, -faceLen, -faceLen, 0));
 
-                    cubeFaces.push(getTriangle(x + faceLen*index,y + j*faceLen, z + size, faceLen, faceLen, 0));
-                    cubeFaces.push(getTriangle(x + faceLen*index + faceLen ,y + j*faceLen + faceLen ,z + size, -faceLen, -faceLen, 0));
+                    cubeFaces.push(getTriangle(x + faceLen * index, y + j * faceLen, z + size, faceLen, faceLen, 0));
+                    cubeFaces.push(getTriangle(x + faceLen * index + faceLen, y + j * faceLen + faceLen, z + size, -faceLen, -faceLen, 0));
 
-                    cubeFaces.push(getTriangle(x + faceLen*index,y, z  + j*faceLen, faceLen, 0, faceLen));
-                    cubeFaces.push(getTriangle(x + faceLen*index + faceLen ,y ,z + j*faceLen + faceLen, -faceLen, 0, -faceLen));
+                    cubeFaces.push(getTriangle(x + faceLen * index, y, z + j * faceLen, faceLen, 0, faceLen));
+                    cubeFaces.push(getTriangle(x + faceLen * index + faceLen, y, z + j * faceLen + faceLen, -faceLen, 0, -faceLen));
 
-                    cubeFaces.push(getTriangle(x + faceLen*index,y  + size, z  + j*faceLen, faceLen, 0, faceLen));
-                    cubeFaces.push(getTriangle(x + faceLen*index + faceLen ,y + size,z + j*faceLen + faceLen, -faceLen, 0, -faceLen));
+                    cubeFaces.push(getTriangle(x + faceLen * index, y + size, z + j * faceLen, faceLen, 0, faceLen));
+                    cubeFaces.push(getTriangle(x + faceLen * index + faceLen, y + size, z + j * faceLen + faceLen, -faceLen, 0, -faceLen));
 
-                    cubeFaces.push(getTriangle(x, y + faceLen*index, z  + j*faceLen, 0, faceLen, faceLen));
-                    cubeFaces.push(getTriangle(x, y + faceLen*index + faceLen, z + j*faceLen + faceLen, 0, -faceLen, -faceLen));
+                    cubeFaces.push(getTriangle(x, y + faceLen * index, z + j * faceLen, 0, faceLen, faceLen));
+                    cubeFaces.push(getTriangle(x, y + faceLen * index + faceLen, z + j * faceLen + faceLen, 0, -faceLen, -faceLen));
 
-                    cubeFaces.push(getTriangle(x  + size, y + faceLen*index, z  + j*faceLen, 0, faceLen, faceLen));
-                    cubeFaces.push(getTriangle(x  + size, y + faceLen*index + faceLen, z + j*faceLen + faceLen, 0, -faceLen, -faceLen));
-                } 
-            }           
-            cubeFaces.forEach(function(element) {
+                    cubeFaces.push(getTriangle(x + size, y + faceLen * index, z + j * faceLen, 0, faceLen, faceLen));
+                    cubeFaces.push(getTriangle(x + size, y + faceLen * index + faceLen, z + j * faceLen + faceLen, 0, -faceLen, -faceLen));
+                }
 
-                scene.add(element);
+            }
+            cubeFaces.forEach(function (element) {
+                pivot.add(element);
             }, this);
+            pivot.position.x = posx;
+            pivot.position.y = posy;
+            pivot.position.z = posz;
+            scene.add(pivot);
         }
 
-        function explodeCube(){
-            cubeFaces.forEach(function(element) {
+        function explodeCube() {
+            cubeFaces.forEach(function (element) {
                 element.position.x += (Math.random() * 0.2 - 0.1);
                 element.position.y += (Math.random() * 0.2 - 0.1);
                 element.position.z += (Math.random() * 0.2 - 0.1);
+                element.rotation.x += 0.02;
+                element.rotation.y += 0.02;
+                element.rotation.z += 0.02;
             }, this);
+        }
+
+        function rotateCube() {
+            pivot.rotation.y += 0.02;
         }
 
 
         $(function () {
             renderer.setClearColor(0xEEEEEE);
             renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.shadowMapEnabled = true;
+            renderer.shadowMap.enabled = true;
 
             svgManager.load(svgUrl,
                 buildSVG,
                 function () { console.log("Loading SVG..."); },
-                function () { console.log("Error loading SVG!");
-            });
+                function () {
+                    console.log("Error loading SVG!");
+                });
 
-            // var axes = new THREE.AxisHelper(20);
-            // scene.add(axes);
+            var axes = new THREE.AxisHelper(20);
+            scene.add(axes);
 
-            buildCube(50,5,74,5);
-
+            buildCube(50, 5, 74, 5);
+            // position and point the camera to the center of the scene
             camera.position.x = -100;
             camera.position.y = 100;
             camera.position.z = 100;
@@ -188,9 +217,10 @@
             trackballControls.panSpeed = 1.0;
             trackballControls.staticMoving = false;
 
-            var ambientLight = new THREE.AmbientLight(0x0c0c0c);
+            // var ambientLight = new THREE.AmbientLight(0x0c0c0c);
+            var ambientLight = new THREE.AmbientLight(0xbbbbbb);
             scene.add(ambientLight);
-           
+
             scene.add(getSpotlight(100, 60, 120));
             scene.add(getSpotlight(150, 10, 150));
 
@@ -207,12 +237,16 @@
                 // render using requestAnimationFrame
                 requestAnimationFrame(render);
                 renderer.render(scene, camera);
-                if (camera.position.distanceTo(cubeFaces[1].geometry.vertices[0]) < 50){
+                if (camera.position.distanceTo(pivot.position) < 50) {
                     exploded = true;
                 }
-                if (exploded){
+                if (exploded) {
                     explodeCube();
                 }
+                else {
+                    rotateCube();
+                }
+                // console.log(trackballControls.position0);    
             }
         });
 
