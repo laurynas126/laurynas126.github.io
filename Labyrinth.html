@@ -11,7 +11,6 @@
     <script src="https://threejs.org/examples/js/loaders/SVGLoader.js"></script>
     <style>
         body {
-            /* set margin to 0 and overflow to hidden, to go fullscreen */
             margin: 0;
             overflow: hidden;
         }
@@ -19,32 +18,20 @@
 </head>
 
 <body>
-
-    <!-- Div which will hold the Output -->
     <div id="WebGL-output">
     </div>
-
-    <!-- Javascript code that runs our Three.js examples -->
     <script type="text/javascript">
-
-        // once everything is loaded, we run our Three.js stuff.
         var svgManager = new THREE.SVGLoader();
         // var svgUrl = 'https://klevas.mif.vu.lt/~rimask/geometrija/maze_4.svg';
         var svgUrl = '/resources/maze_4.svg';
         var svgLabyrinth = null;
         var labyrinthMesh;
-
-        // create a scene, that will hold all our elements such as objects, cameras and lights.
         var scene = new THREE.Scene();
-        // create a camera, which defines where we're looking at.
         var camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
-        // create a render and set the size
         var renderer = new THREE.WebGLRenderer();
         var clock = new THREE.Clock();
-
         var cubeFaces = [];
         var pivot = new THREE.Group();
-
         var exploded = false;
         var WALL_THICKNESS = 3;
 
@@ -65,7 +52,7 @@
                 var z = Number(element.getAttribute('y1'));
                 var lengthZ = Number(element.getAttribute('y2')) - z;
                 var wall = getWall(x, 5, z, lengthX, 10, lengthZ, WALL_THICKNESS);
-                wall.updateMatrix(); // as needed
+                wall.updateMatrix(); 
                 singleGeometry.merge(wall.geometry, wall.matrix);
             }
             var boxMat = new THREE.MeshLambertMaterial({ color: 0xF6831E });
@@ -76,8 +63,6 @@
         function getWall(x, y, z, lenX, lenY, lenZ, thickness) {
             if (lenZ == 0) {
                 lenY = lenY + 0.1;
-                // x += thickness;
-                // lenX -= thickness;
                 thickness += 0.1;
             }
             x = x + lenX / 2;
@@ -88,10 +73,7 @@
             box.position.x = x;
             box.position.y = y;
             box.position.z = z;
-            // box.castShadow = true;
-            // box.receiveShadows = true;
             return box;
-            // scene.add(box);
         }
 
         function getPlane(x, z, width, height) {
@@ -203,7 +185,6 @@
             scene.add(axes);
 
             buildCube(50, 5, 74, 5);
-            // position and point the camera to the center of the scene
             camera.position.x = -100;
             camera.position.y = 100;
             camera.position.z = 100;
@@ -217,17 +198,14 @@
             trackballControls.panSpeed = 1.0;
             trackballControls.staticMoving = false;
 
-            // var ambientLight = new THREE.AmbientLight(0x0c0c0c);
             var ambientLight = new THREE.AmbientLight(0xbbbbbb);
             scene.add(ambientLight);
 
             scene.add(getSpotlight(100, 60, 120));
             scene.add(getSpotlight(150, 10, 150));
 
-            // add the output of the renderer to the html element
             $("#WebGL-output").append(renderer.domElement);
 
-            // render the scene
             render();
 
             function render() {
@@ -246,7 +224,6 @@
                 else {
                     rotateCube();
                 }
-                // console.log(trackballControls.position0);    
             }
         });
 
