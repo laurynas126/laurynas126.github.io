@@ -133,7 +133,7 @@
 
         function getPlane(x, z, width, height) {
             var planeGeometry = new THREE.PlaneGeometry(width, height);
-            var planeMaterial = new THREE.MeshLambertMaterial({ color: 0xbbff00, side: THREE.DoubleSide });
+            var planeMaterial = new THREE.MeshLambertMaterial({ color: 0xFFF847, side: THREE.DoubleSide });
             // var planeMaterial = new THREE.MeshPhongMaterial({ color: 0xbbff00, side: THREE.DoubleSide  });
             var plane = new THREE.Mesh(planeGeometry, planeMaterial);
             planeGeometry.computeFaceNormals();
@@ -154,14 +154,13 @@
 
         function getTriangle(x, y, z, lengthX, lengthY, lengthZ) {
             var geometry = new THREE.Geometry();
-            geometry.vertices.push(new THREE.Vector3(0 + lengthX, 0, 0));
-            geometry.vertices.push(new THREE.Vector3(0, 0 + lengthY, 0));
-            geometry.vertices.push(new THREE.Vector3(0, 0, 0 + lengthZ));
+            geometry.vertices.push(new THREE.Vector3(lengthX, 0, 0));
+            geometry.vertices.push(new THREE.Vector3(0, lengthY, 0));
+            geometry.vertices.push(new THREE.Vector3(0, 0, lengthZ));
             geometry.faces.push(new THREE.Face3(0, 1, 2));
             // geometry.computeFaceNormals();
             geometry.computeVertexNormals();
             var material1 = new THREE.MeshLambertMaterial({ color: 0x00A3A3, side: THREE.DoubleSide });
-            // var material1 = new THREE.MeshBasicMaterial({ color: 0x00A3A3, side: THREE.DoubleSide });
             var triangle = new THREE.Mesh(geometry, material1);
             triangle.position.x = x;
             triangle.position.y = y;
@@ -227,7 +226,7 @@
                 var velocity = faceVelocities[index];
 
                 //Ceck if collides with ground
-                if (element.position.y + velocity.y <= -4) {
+                if (element.position.y + velocity.y <= -4.5) {
                     velocity.y = -velocity.y;
                 }
 
@@ -344,7 +343,7 @@
             camera.position.x = -100;
             camera.position.y = 100;
             camera.position.z = 100;
-            camera.lookAt(scene.position);
+            camera.lookAt(pivot.position);
 
 
             var trackballControls = new THREE.TrackballControls(camera);
