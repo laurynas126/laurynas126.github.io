@@ -6,6 +6,7 @@
 <head>
     <title>Labyrinth</title>
     <script type="text/javascript" src="libs/three.js"></script>
+    <script type="text/javascript" src="libs/dat.gui.js"></script>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
     <script type="text/javascript" src="libs/TrackballControls.js"></script>
     <script src="https://threejs.org/examples/js/loaders/SVGLoader.js"></script>
@@ -26,9 +27,9 @@
         var svgUrl = '/resources/maze_4.svg';
         var svgLabyrinth = null;
         var labyrinthMesh;
-        
+
         var scene = new THREE.Scene();
-        var camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+        var camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 2000);
         var renderer = new THREE.WebGLRenderer();
         var clock = new THREE.Clock();
 
@@ -36,12 +37,14 @@
         var pivot = new THREE.Group();
 
         var faceVelocities = [];
-        
+
         var exploded = false;
+        var THICK_WALLS = true;
         var WALL_THICKNESS = 3;
         var WALL_HEIGHT = 10;
         var CUBE_ROTATION_VELOCITY = 0.02;
-        var CUBE_CENTER = new THREE.Vector3(0,0,0);
+        var CUBE_CENTER = new THREE.Vector3(0, 0, 0);
+        var WALL_LIST = [];
 
 
 
@@ -52,44 +55,74 @@
             var height = Number(svgLabyrinth.getAttribute('height')) + 50;
             scene.add(getPlane(width / 2 - 25, height / 2 - 25, width, height));
             var walls = svgLabyrinth.children[2].children;
-            var singleGeometry = new THREE.Geometry();
+            drawWalls(walls);
+        }
+
+        function drawWalls(walls) {
+            WALL_LIST = [];
             for (var index = 0; index < walls.length; index++) {
                 var element = walls[index];
                 var x = Number(element.getAttribute('x1'));
                 var lengthX = Number(element.getAttribute('x2')) - x;
                 var z = Number(element.getAttribute('y1'));
                 var lengthZ = Number(element.getAttribute('y2')) - z;
-                var wall = getWall(x, WALL_HEIGHT/2, z, lengthX, WALL_HEIGHT, lengthZ, WALL_THICKNESS);
+                var wall = getWall(x, WALL_HEIGHT / 2, z, lengthX, WALL_HEIGHT, lengthZ, WALL_THICKNESS);
                 scene.add(wall);
-                // wall.updateMatrix(); // as needed
-                // singleGeometry.merge(wall.geometry, wall.matrix);
+                WALL_LIST.push(wall);
             }
-            // var boxMat = new THREE.MeshLambertMaterial({ color: 0xF6831E});
-            // labyrinthMesh = new THREE.Mesh(singleGeometry, boxMat);
-            // scene.add(labyrinthMesh);
         }
 
-        function getWall(x, y, z, lenX, lenY, lenZ, thickness){
+        function getWall(x, y, z, lenX, lenY, lenZ, thickness) {
             x = x + lenX / 2;
             z = z + (thickness + lenZ) / 2;
-            var boxGeom = new THREE.BoxGeometry(lenX + thickness,lenY,lenZ + thickness);
-            var boxMat = new THREE.MeshLambertMaterial({ color: 0xF6831E});
+            var boxGeom = new THREE.BoxGeometry(lenX + thickness, lenY, lenZ + thickness);
+            var boxMat = new THREE.MeshLambertMaterial({ color: 0xF6831E });
             boxMat.polygonOffset = true;
-            if (lenZ == 0){
+            if (lenZ == 0) {
                 boxMat.polygonOffsetFactor = -0.5;
             }
             var box = new THREE.Mesh(boxGeom, boxMat);
             box.position.x = x;
             box.position.y = y;
             box.position.z = z;
+            box.castShadow = true;
             return box;
         }
 
-        function getPlane(x, z, width, height){
+        function deleteWalls() {
+            WALL_LIST.forEach(function (element) {
+                scene.remove(element);
+            }, this);
+        }
+
+        function addGui() {
+            var controls = new function () {
+                this.thickWalls = true;
+
+            }
+            var gui = new dat.GUI();
+            gui.add(controls, 'thickWalls').onChange(function (isThick) {
+                if (isThick) {
+                    WALL_THICKNESS = 3;
+                }
+                else
+                    WALL_THICKNESS = 0;
+                deleteWalls();
+                buildSVG(svgLabyrinth);
+            });
+
+        }
+
+        function getPlane(x, z, width, height) {
             var planeGeometry = new THREE.PlaneGeometry(width, height);
-            var planeMaterial = new THREE.MeshLambertMaterial({ color: 0xffffff });
+            var planeMaterial = new THREE.MeshLambertMaterial({ color: 0xbbff00, side: THREE.DoubleSide });
+            // var planeMaterial = new THREE.MeshPhongMaterial({ color: 0xbbff00, side: THREE.DoubleSide  });
             var plane = new THREE.Mesh(planeGeometry, planeMaterial);
+            planeGeometry.computeFaceNormals();
             plane.receiveShadows = true;
+
+            planeMaterial.polygonOffset = true;
+            planeMaterial.polygonOffsetFactor = -1;
 
             plane.rotation.x = -0.5 * Math.PI;
             plane.position.x = x
@@ -99,23 +132,18 @@
             return plane;
         }
 
-        function getSpotlight(x, y, z){
-            var spotLight = new THREE.SpotLight( 0xffffff );
-            spotLight.position.set( x, y, z );
-            spotLight.castShadow = true;
-            // spotLight.distance = 20;
-            return spotLight;
-        }
+
 
         function getTriangle(x, y, z, lengthX, lengthY, lengthZ) {
             var geometry = new THREE.Geometry();
             geometry.vertices.push(new THREE.Vector3(0 + lengthX, 0, 0));
             geometry.vertices.push(new THREE.Vector3(0, 0 + lengthY, 0));
-            geometry.vertices.push(new THREE.Vector3(0, 0 , 0 + lengthZ));
+            geometry.vertices.push(new THREE.Vector3(0, 0, 0 + lengthZ));
             geometry.faces.push(new THREE.Face3(0, 1, 2));
-            geometry.computeFaceNormals();
+            // geometry.computeFaceNormals();
             geometry.computeVertexNormals();
             var material1 = new THREE.MeshLambertMaterial({ color: 0x00A3A3, side: THREE.DoubleSide });
+            // var material1 = new THREE.MeshBasicMaterial({ color: 0x00A3A3, side: THREE.DoubleSide });
             var triangle = new THREE.Mesh(geometry, material1);
             triangle.position.x = x;
             triangle.position.y = y;
@@ -124,7 +152,7 @@
             return triangle;
         }
 
-        function buildCube(posx,posy,posz, size){
+        function buildCube(posx, posy, posz, size) {
             cubeFaces = [];
             var x = -2.5;
             var y = x;
@@ -133,26 +161,26 @@
             var faceLen = size / split;
             for (var index = 0; index < split; index++) {
                 for (var j = 0; j < split; j++) {
-                    cubeFaces.push(getTriangle(x + faceLen*index,y + j*faceLen, z, faceLen, faceLen, 0));
-                    cubeFaces.push(getTriangle(x + faceLen*index + faceLen ,y + j*faceLen + faceLen ,z, -faceLen, -faceLen, 0));
+                    cubeFaces.push(getTriangle(x + faceLen * index, y + j * faceLen, z, faceLen, faceLen, 0));
+                    cubeFaces.push(getTriangle(x + faceLen * index + faceLen, y + j * faceLen + faceLen, z, -faceLen, -faceLen, 0));
 
-                    cubeFaces.push(getTriangle(x + faceLen*index,y + j*faceLen, z + size, faceLen, faceLen, 0));
-                    cubeFaces.push(getTriangle(x + faceLen*index + faceLen ,y + j*faceLen + faceLen ,z + size, -faceLen, -faceLen, 0));
+                    cubeFaces.push(getTriangle(x + faceLen * index, y + j * faceLen, z + size, faceLen, faceLen, 0));
+                    cubeFaces.push(getTriangle(x + faceLen * index + faceLen, y + j * faceLen + faceLen, z + size, -faceLen, -faceLen, 0));
 
-                    cubeFaces.push(getTriangle(x + faceLen*index,y, z  + j*faceLen, faceLen, 0, faceLen));
-                    cubeFaces.push(getTriangle(x + faceLen*index + faceLen ,y ,z + j*faceLen + faceLen, -faceLen, 0, -faceLen));
+                    cubeFaces.push(getTriangle(x + faceLen * index, y, z + j * faceLen, faceLen, 0, faceLen));
+                    cubeFaces.push(getTriangle(x + faceLen * index + faceLen, y, z + j * faceLen + faceLen, -faceLen, 0, -faceLen));
 
-                    cubeFaces.push(getTriangle(x + faceLen*index,y  + size, z  + j*faceLen, faceLen, 0, faceLen));
-                    cubeFaces.push(getTriangle(x + faceLen*index + faceLen ,y + size,z + j*faceLen + faceLen, -faceLen, 0, -faceLen));
+                    cubeFaces.push(getTriangle(x + faceLen * index, y + size, z + j * faceLen, faceLen, 0, faceLen));
+                    cubeFaces.push(getTriangle(x + faceLen * index + faceLen, y + size, z + j * faceLen + faceLen, -faceLen, 0, -faceLen));
 
-                    cubeFaces.push(getTriangle(x, y + faceLen*index, z  + j*faceLen, 0, faceLen, faceLen));
-                    cubeFaces.push(getTriangle(x, y + faceLen*index + faceLen, z + j*faceLen + faceLen, 0, -faceLen, -faceLen));
+                    cubeFaces.push(getTriangle(x, y + faceLen * index, z + j * faceLen, 0, faceLen, faceLen));
+                    cubeFaces.push(getTriangle(x, y + faceLen * index + faceLen, z + j * faceLen + faceLen, 0, -faceLen, -faceLen));
 
-                    cubeFaces.push(getTriangle(x  + size, y + faceLen*index, z  + j*faceLen, 0, faceLen, faceLen));
-                    cubeFaces.push(getTriangle(x  + size, y + faceLen*index + faceLen, z + j*faceLen + faceLen, 0, -faceLen, -faceLen));
+                    cubeFaces.push(getTriangle(x + size, y + faceLen * index, z + j * faceLen, 0, faceLen, faceLen));
+                    cubeFaces.push(getTriangle(x + size, y + faceLen * index + faceLen, z + j * faceLen + faceLen, 0, -faceLen, -faceLen));
                 }
-           }           
-            cubeFaces.forEach(function(element) {
+            }
+            cubeFaces.forEach(function (element) {
                 var elementVelocity = new THREE.Vector3();
                 elementVelocity.x = getAxisVelocity(element.position.x);
                 elementVelocity.y = getAxisVelocity(element.position.y);
@@ -166,33 +194,37 @@
             scene.add(pivot);
         }
 
-        function getAxisVelocity(axisPosition){
+        function getAxisVelocity(axisPosition) {
             var velocity = (Math.random() * 0.02 - 0.01);
-            if (axisPosition != 0){
-                velocity += 1 / (10*axisPosition);
+            if (axisPosition != 0) {
+                velocity += axisPosition / 30;
             }
             return velocity;
         }
 
-        function explodeCube(){
+        function explodeCube() {
             pivot.rotation.y = 2 * Math.PI;
             for (var index = 0; index < cubeFaces.length; index++) {
                 var element = cubeFaces[index];
                 var velocity = faceVelocities[index];
-                if (element.position.y + velocity.y <= -5){
+                if (element.position.y + velocity.y <= -5) {
                     velocity.y = -velocity.y;
+                    // element.position.y = -5;
+                    // velocity.x = 0;
+                    // velocity.y = 0;
+                    // velocity.z = 0;
                 }
-                if (element.position.y <= WALL_HEIGHT/2 && element.position.x >= -7 && element.position.z + velocity.z <= -10 + WALL_THICKNESS){
-                    velocity.z = velocity.z * (-1);
+                if (element.position.y <= WALL_HEIGHT / 2 && element.position.x >= -7 && element.position.z + velocity.z <= -10 + WALL_THICKNESS) {
+                    velocity.z = -velocity.z;
                 }
-                if (element.position.y <= WALL_HEIGHT/2 && element.position.x + velocity.x >= 10 - WALL_THICKNESS){
-                    velocity.x = velocity.x * (-1);
+                if (element.position.y <= WALL_HEIGHT / 2 && element.position.x + velocity.x >= 10 - WALL_THICKNESS) {
+                    velocity.x = -velocity.x;
                 }
-                if (element.position.y <= WALL_HEIGHT/2 && element.position.x + velocity.x >= -23 && element.position.x + velocity.x <= -7 + WALL_THICKNESS && element.position.z >= 6 - WALL_THICKNESS){
-                    velocity.z = velocity.z * (-1);
+                if (element.position.y <= WALL_HEIGHT / 2 && element.position.x + velocity.x >= -23 && element.position.x + velocity.x <= -7 + WALL_THICKNESS && element.position.z >= 6 - WALL_THICKNESS) {
+                    velocity.z = -velocity.z;
                 }
-                if (element.position.y <= WALL_HEIGHT/2 && element.position.x + velocity.x <= -24 + WALL_THICKNESS){
-                    velocity.x = velocity.x * (-1);
+                if (element.position.y <= WALL_HEIGHT / 2 && element.position.x + velocity.x <= -24 + WALL_THICKNESS) {
+                    velocity.x = -velocity.x;
                 }
                 element.position.x += velocity.x;
                 element.position.y += velocity.y;
@@ -207,8 +239,65 @@
             }
         }
 
-        function rotateCube(){
-            pivot.rotation.y += CUBE_ROTATION_VELOCITY; 
+        function rotateCube() {
+            pivot.rotation.y += CUBE_ROTATION_VELOCITY;
+        }
+
+        function getSphere(x, y, z) {
+            // SphereGeometry(radius, widthSegments, heightSegments, phiStart, phiLength, thetaStart, thetaLength)
+            var sphereGeom = new THREE.SphereGeometry(2, 12, 12);
+            var sphereMat = new THREE.MeshBasicMaterial({ color: 0xFFFFFF, transparent: true, opacity: 0.8 });
+            var sphere = new THREE.Mesh(sphereGeom, sphereMat);
+            sphere.position.x = x;
+            sphere.position.y = y;
+            sphere.position.z = z;
+            return sphere;
+        }
+
+        function getPost(x, y, z) {
+            var boxGeom = new THREE.BoxGeometry(1, y - 1, 1);
+            var boxMat = new THREE.MeshBasicMaterial({ color: 0x000000 });
+            var box = new THREE.Mesh(boxGeom, boxMat);
+            box.position.x = x;
+            box.position.y = (y - 1) / 2;
+            box.position.z = z;
+            return box;
+        }
+
+        function getSpotlight(x, y, z) {
+            var spotLight = new THREE.SpotLight(0xffffff);
+            spotLight.position.set(x, y, z);
+            return spotLight;
+        }
+
+        function putLights() {
+            // drawLamp(153, 7 , -5);
+            drawLamp(145, 7, 12);
+            drawLamp(107, 7, 18);
+            drawLamp(91, 7, 18);
+            drawLamp(68, 7, 27);
+            drawLamp(25, 7, 40);
+            drawLamp(19, 7, 12);
+            drawLamp(10, 7, 52);
+            scene.add(getSpotlight(25 + 10, 15, 60 + 10));
+
+        }
+
+        function drawLamp(x, y, z) {
+            scene.add(getSphere(x, y, z));
+            var spotLight = getSpotlight(x, y, z);
+            spotLight.distance = 18;
+            spotLight.intensity = 5;
+            spotLight.angle = 1.4;
+            spotLight.decay = 1;
+            spotLight.penumbra = 1;
+            var targetObject = new THREE.Object3D();
+            targetObject.position.set(x - 3, -10, z - 3);
+            scene.add(targetObject);
+            spotLight.target = targetObject;
+
+            scene.add(spotLight);
+            scene.add(getPost(x, y, z));
         }
 
 
@@ -220,13 +309,11 @@
             svgManager.load(svgUrl,
                 buildSVG,
                 function () { console.log("Loading SVG..."); },
-                function () { console.log("Error loading SVG!");
-            });
+                function () {
+                    console.log("Error loading SVG!");
+                });
 
-            var axes = new THREE.AxisHelper(20);
-            scene.add(axes);
-       
-            buildCube(25,5,60,5);
+            buildCube(25, 5, 60, 5);
 
             camera.position.x = -100;
             camera.position.y = 100;
@@ -242,11 +329,12 @@
             trackballControls.staticMoving = false;
 
             // var ambientLight = new THREE.AmbientLight(0x0c0c0c);
-            var ambientLight = new THREE.AmbientLight(0xbbbbbb);
+            var ambientLight = new THREE.AmbientLight(0xaaaaaa);
             scene.add(ambientLight);
-           
-            scene.add(getSpotlight(100, 60, 120));
-            scene.add(getSpotlight(150, 10, 150));
+
+            putLights();
+            addGui();
+
 
             $("#WebGL-output").append(renderer.domElement);
 
@@ -259,10 +347,10 @@
                 // render using requestAnimationFrame
                 requestAnimationFrame(render);
                 renderer.render(scene, camera);
-                if (camera.position.distanceTo(pivot.position) < 50){
+                if (camera.position.distanceTo(pivot.position) < 50) {
                     exploded = true;
                 }
-                if (exploded){
+                if (exploded) {
                     explodeCube();
                 }
                 else {
