@@ -70,6 +70,24 @@
                 scene.add(wall);
                 WALL_LIST.push(wall);
             }
+            addExtraWalls();
+        }
+
+        function addExtraWalls() {
+            var wall = getWall(34, WALL_HEIGHT / 2, 2, 32, WALL_HEIGHT, 0, WALL_THICKNESS);
+            wall.material.polygonOffset = true;
+            wall.material.polygonOffsetFactor = -0.8;
+
+            scene.add(wall);
+            WALL_LIST.push(wall);
+
+            wall = getWall(2, WALL_HEIGHT / 2, 2, 0, WALL_HEIGHT, 64, WALL_THICKNESS);
+            wall.material.polygonOffset = true;
+            wall.material.polygonOffsetFactor = -0.8;
+
+            scene.add(wall);
+            WALL_LIST.push(wall);
+
         }
 
         function getWall(x, y, z, lenX, lenY, lenZ, thickness) {
@@ -122,7 +140,7 @@
             plane.receiveShadows = true;
 
             planeMaterial.polygonOffset = true;
-            planeMaterial.polygonOffsetFactor = -1;
+            planeMaterial.polygonOffsetFactor = -3;
 
             plane.rotation.x = -0.5 * Math.PI;
             plane.position.x = x
@@ -195,7 +213,7 @@
         }
 
         function getAxisVelocity(axisPosition) {
-            var velocity = (Math.random() * 0.02 - 0.01);
+            var velocity = (Math.random() * 0.04 - 0.02);
             if (axisPosition != 0) {
                 velocity += axisPosition / 30;
             }
@@ -207,24 +225,33 @@
             for (var index = 0; index < cubeFaces.length; index++) {
                 var element = cubeFaces[index];
                 var velocity = faceVelocities[index];
-                if (element.position.y + velocity.y <= -5) {
+
+                //Ceck if collides with ground
+                if (element.position.y + velocity.y <= -4) {
                     velocity.y = -velocity.y;
-                    // element.position.y = -5;
-                    // velocity.x = 0;
-                    // velocity.y = 0;
-                    // velocity.z = 0;
                 }
-                if (element.position.y <= WALL_HEIGHT / 2 && element.position.x >= -7 && element.position.z + velocity.z <= -10 + WALL_THICKNESS) {
-                    velocity.z = -velocity.z;
-                }
-                if (element.position.y <= WALL_HEIGHT / 2 && element.position.x + velocity.x >= 10 - WALL_THICKNESS) {
-                    velocity.x = -velocity.x;
-                }
-                if (element.position.y <= WALL_HEIGHT / 2 && element.position.x + velocity.x >= -23 && element.position.x + velocity.x <= -7 + WALL_THICKNESS && element.position.z >= 6 - WALL_THICKNESS) {
-                    velocity.z = -velocity.z;
-                }
-                if (element.position.y <= WALL_HEIGHT / 2 && element.position.x + velocity.x <= -24 + WALL_THICKNESS) {
-                    velocity.x = -velocity.x;
+
+                //Check if collides with wall
+                if (element.position.y <= WALL_HEIGHT / 2) {
+
+                    if (element.position.x >= -7 && element.position.z + velocity.z <= -10 + WALL_THICKNESS) {
+                        velocity.z = -velocity.z;
+                    }
+                    if (element.position.x + velocity.x >= 10 - WALL_THICKNESS) {
+                        velocity.x = -velocity.x;
+                    }
+                    if (element.position.x + velocity.x >= -23 && element.position.x + velocity.x <= -7 + WALL_THICKNESS && element.position.z >= 66 - 61) {
+                        velocity.z = -velocity.z;
+                    }
+                    if (element.position.x + velocity.x <= 0 - 24 + WALL_THICKNESS) {
+                        velocity.x = -velocity.x;
+                    }
+                    if (element.position.x + velocity.x >= 18 - 24 - WALL_THICKNESS && element.position.z <= 50 - 59) {
+                        velocity.x = -velocity.x;
+                    }
+                    if (element.position.x + velocity.x >= 18 - 24 - WALL_THICKNESS && element.position.x + velocity.x <= 34 - 24 + WALL_THICKNESS && element.position.z >= 82 - 60) {
+                        velocity.z = -velocity.z;
+                    }      
                 }
                 element.position.x += velocity.x;
                 element.position.y += velocity.y;
@@ -264,41 +291,40 @@
             return box;
         }
 
-        function getSpotlight(x, y, z) {
-            var spotLight = new THREE.SpotLight(0xffffff);
-            spotLight.position.set(x, y, z);
-            return spotLight;
-        }
-
-        function putLights() {
-            // drawLamp(153, 7 , -5);
-            drawLamp(145, 7, 12);
-            drawLamp(107, 7, 18);
-            drawLamp(91, 7, 18);
-            drawLamp(68, 7, 27);
-            drawLamp(25, 7, 40);
-            drawLamp(19, 7, 12);
-            drawLamp(10, 7, 52);
-            scene.add(getSpotlight(25 + 10, 15, 60 + 10));
-
+        function getPointLight(x, y, z) {
+            var pointLight = new THREE.PointLight(0xffffff);
+            pointLight.position.set(x, y, z);
+            return pointLight;
         }
 
         function drawLamp(x, y, z) {
             scene.add(getSphere(x, y, z));
-            var spotLight = getSpotlight(x, y, z);
-            spotLight.distance = 18;
-            spotLight.intensity = 5;
-            spotLight.angle = 1.4;
-            spotLight.decay = 1;
-            spotLight.penumbra = 1;
-            var targetObject = new THREE.Object3D();
-            targetObject.position.set(x - 3, -10, z - 3);
-            scene.add(targetObject);
-            spotLight.target = targetObject;
+            var pointLight = getPointLight(x, y, z);
+            pointLight.distance = 17;
+            pointLight.intensity = 10;
+            pointLight.decay = 2;
 
-            scene.add(spotLight);
+            scene.add(pointLight);
             scene.add(getPost(x, y, z));
         }
+
+        function putLights() {
+            // drawLamp(153, 7 , -5);
+            drawLamp(145, 7, 10);
+            drawLamp(107, 7, 18);
+            drawLamp(91, 7, 18);
+            drawLamp(70, 7, 27);
+            drawLamp(25, 7, 40);
+            drawLamp(19, 7, 12);
+            drawLamp(10, 7, 52);
+
+            var cubeLight = getPointLight(25, 20, 60);
+            cubeLight.distance = 60;
+            cubeLight.decay = 2;
+            scene.add(cubeLight);
+
+        }
+
 
 
         $(function () {
@@ -347,7 +373,7 @@
                 // render using requestAnimationFrame
                 requestAnimationFrame(render);
                 renderer.render(scene, camera);
-                if (camera.position.distanceTo(pivot.position) < 50) {
+                if (camera.position.distanceTo(pivot.position) < 30) {
                     exploded = true;
                 }
                 if (exploded) {
