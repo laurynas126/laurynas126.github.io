@@ -7,8 +7,8 @@
     <title>Labyrinth</title>
     <script type="text/javascript" src="libs/three.js"></script>
     <script type="text/javascript" src="libs/dat.gui.js"></script>
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
     <script type="text/javascript" src="libs/TrackballControls.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
     <script src="https://threejs.org/examples/js/loaders/SVGLoader.js"></script>
     <style>
         body {
@@ -126,7 +126,7 @@
                 else
                     WALL_THICKNESS = 0;
                 deleteWalls();
-                buildSVG(svgLabyrinth);
+                drawWalls(svgLabyrinth.children[2].children);
             });
 
         }
@@ -308,7 +308,6 @@
         }
 
         function putLights() {
-            // drawLamp(153, 7 , -5);
             drawLamp(145, 7, 10);
             drawLamp(107, 7, 18);
             drawLamp(91, 7, 18);
