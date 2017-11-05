@@ -23,7 +23,7 @@
     </div>
     <script type="text/javascript">
         var svgManager = new THREE.SVGLoader();
-        // var svgUrl = 'https://klevas.mif.vu.lt/~rimask/geometrija/maze_4.svg';
+        //var svgUrl = 'https://klevas.mif.vu.lt/~rimask/geometrija/maze_4.svg';
         var svgUrl = '/resources/maze_4.svg';
         var svgLabyrinth = null;
         var labyrinthMesh;
@@ -93,7 +93,7 @@
         function getWall(x, y, z, lenX, lenY, lenZ, thickness) {
             x = x + lenX / 2;
             z = z + (thickness + lenZ) / 2;
-            var boxGeom = new THREE.BoxGeometry(lenX + thickness, lenY, lenZ + thickness);
+            var boxGeom = new THREE.BoxGeometry(lenX + thickness, lenY, lenZ + thickness, 10, 1);
             var boxMat = new THREE.MeshLambertMaterial({ color: 0xF6831E });
             boxMat.polygonOffset = true;
             if (lenZ == 0) {
@@ -132,7 +132,7 @@
         }
 
         function getPlane(x, z, width, height) {
-            var planeGeometry = new THREE.PlaneGeometry(width, height);
+            var planeGeometry = new THREE.PlaneGeometry(width, height, 200, 200);
             var planeMaterial = new THREE.MeshLambertMaterial({ color: 0xFFF847, side: THREE.DoubleSide });
             // var planeMaterial = new THREE.MeshPhongMaterial({ color: 0xbbff00, side: THREE.DoubleSide  });
             var plane = new THREE.Mesh(planeGeometry, planeMaterial);
@@ -299,8 +299,8 @@
         function drawLamp(x, y, z) {
             scene.add(getSphere(x, y, z));
             var pointLight = getPointLight(x, y, z);
-            pointLight.distance = 17;
-            pointLight.intensity = 10;
+            pointLight.distance = 15;
+            pointLight.intensity = 5;
             pointLight.decay = 2;
 
             scene.add(pointLight);
@@ -312,7 +312,7 @@
             drawLamp(107, 7, 18);
             drawLamp(91, 7, 18);
             drawLamp(70, 7, 27);
-            drawLamp(25, 7, 40);
+            drawLamp(27, 7, 40);
             drawLamp(19, 7, 12);
             drawLamp(10, 7, 52);
 
