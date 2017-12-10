@@ -9,6 +9,7 @@
     <script type="text/javascript" src="libs/three.js"></script>
     <script type="text/javascript" src="libs/dat.gui.js"></script>
     <script type="text/javascript" src="libs/TrackballControls.js"></script>
+    <script type="text/javascript" src="libs/OrbitControls.js"></script>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
     <script src="https://threejs.org/examples/js/loaders/SVGLoader.js"></script>
     <style>
@@ -32,12 +33,15 @@
         var scene = new THREE.Scene();
         var camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 2000);
         var renderer = new THREE.WebGLRenderer();
+        var orbitCamera = null;
         var clock = new THREE.Clock();
+        var ball = getBall();
 
         var cubeFaces = [];
         var pivot = new THREE.Group();
 
         var faceVelocities = [];
+        var gui;
 
         var exploded = false;
         var THICK_WALLS = true;
@@ -46,6 +50,10 @@
         var CUBE_ROTATION_VELOCITY = 0.02;
         var CUBE_CENTER = new THREE.Vector3(0, 0, 0);
         var WALL_LIST = [];
+
+        var isTopDown = false;
+        var dollyZoom = false;
+        
 
 
 
@@ -94,8 +102,13 @@
         function getWall(x, y, z, lenX, lenY, lenZ, thickness) {
             x = x + lenX / 2;
             z = z + (thickness + lenZ) / 2;
-            var boxGeom = new THREE.BoxGeometry(lenX + thickness, lenY, lenZ + thickness, 10, 1);
-            var boxMat = new THREE.MeshLambertMaterial({ color: 0xF6831E });
+            var boxGeom = new THREE.BoxGeometry(lenX + thickness, lenY, lenZ + thickness, 1, 1);
+            addGeometryUvs(boxGeom);
+            var boxMat = new THREE.MeshLambertMaterial();
+            var texture = new THREE.TextureLoader().load("images/texture-atlas.jpg");
+            texture.wrapS = THREE.RepeatWrapping;
+            texture.wrapT = THREE.RepeatWrapping;
+            boxMat.map = texture;
             boxMat.polygonOffset = true;
             if (lenZ == 0) {
                 boxMat.polygonOffsetFactor = -0.5;
@@ -108,31 +121,34 @@
             return box;
         }
 
+        function addGeometryUvs(geo){
+            var bricks = [new THREE.Vector2(0, .666), new THREE.Vector2(.5, .666), new THREE.Vector2(.5, 1), new THREE.Vector2(0, 1)];
+            var clouds = [new THREE.Vector2(.5, .666), new THREE.Vector2(1, .666), new THREE.Vector2(1, 1), new THREE.Vector2(.5, 1)];
+            var crate = [new THREE.Vector2(0, .333), new THREE.Vector2(.5, .333), new THREE.Vector2(.5, .666), new THREE.Vector2(0, .666)];
+            var stone = [new THREE.Vector2(.5, .333), new THREE.Vector2(1, .333), new THREE.Vector2(1, .666), new THREE.Vector2(.5, .666)];
+            var water = [new THREE.Vector2(0, 0), new THREE.Vector2(.5, 0), new THREE.Vector2(.5, .333), new THREE.Vector2(0, .333)];
+            var wood = [new THREE.Vector2(.5, 0), new THREE.Vector2(1, 0), new THREE.Vector2(1, .333), new THREE.Vector2(.5, .333)];
+            geo.faceVertexUvs[0][0] = [ bricks[0], bricks[1], bricks[3] ];
+            geo.faceVertexUvs[0][1] = [ bricks[1], bricks[2], bricks[3] ];
+            geo.faceVertexUvs[0][2] = [ clouds[0], clouds[1], clouds[3] ];
+            geo.faceVertexUvs[0][3] = [ clouds[1], clouds[2], clouds[3] ];
+            geo.faceVertexUvs[0][4] = [ crate[0], crate[1], crate[3] ];
+            geo.faceVertexUvs[0][5] = [ crate[1], crate[2], crate[3] ];
+            geo.faceVertexUvs[0][6] = [ stone[0], stone[1], stone[3] ];
+            geo.faceVertexUvs[0][7] = [ stone[1], stone[2], stone[3] ];
+            geo.faceVertexUvs[0][8] = [ water[0], water[1], water[3] ];
+            geo.faceVertexUvs[0][9] = [ water[1], water[2], water[3] ];
+            geo.faceVertexUvs[0][10] = [ wood[0], wood[1], wood[3] ];
+            geo.faceVertexUvs[0][11] = [ wood[1], wood[2], wood[3] ];
+        }
+
         function deleteWalls() {
             WALL_LIST.forEach(function (element) {
                 scene.remove(element);
             }, this);
         }
 
-        function addGui() {
-            var controls = new function () {
-                this.thickWalls = true;
-                this.camera = 0;
-            }
-            var gui = new dat.GUI();
-            gui.add(controls, 'thickWalls').onChange(function (isThick) {
-                if (isThick) {
-                    WALL_THICKNESS = 3;
-                }
-                else
-                    WALL_THICKNESS = 0;
-                deleteWalls();
-                drawWalls(svgLabyrinth.children[2].children);
-            });
-            // gui.add(controls, 'camera', ['unrestricted', 'top down', 'ball 3rd person']);
-            gui.add(controls, 'camera', {unrestricted:0, top:1, ball:2});
 
-        }
 
         function getPlane(x, z, width, height) {
             var planeGeometry = new THREE.PlaneGeometry(width, height, 200, 200);
@@ -283,6 +299,18 @@
             return sphere;
         }
 
+        function getBall(){
+            var geom = new THREE.SphereGeometry(4,24,24);
+            var texture = new THREE.TextureLoader().load( "images/football.png");
+            texture.wrapS = THREE.RepeatWrapping;
+            texture.wrapT = THREE.RepeatWrapping;
+            var material = new THREE.MeshBasicMaterial({map: texture} );
+            var mesh = new THREE.Mesh( geom, material );
+            mesh.position.x = 155;
+            mesh.position.y = 3;
+            return mesh;
+        }
+
         function getPost(x, y, z) {
             var boxGeom = new THREE.BoxGeometry(1, y - 1, 1);
             var boxMat = new THREE.MeshBasicMaterial({ color: 0x000000 });
@@ -323,11 +351,87 @@
             cubeLight.distance = 60;
             cubeLight.decay = 2;
             scene.add(cubeLight);
+        }
 
+        function addGui() {
+            var controls = new function () {
+                this.thickWalls = true;
+                this.camera = 'unrestricted';
+                this.dolly = false;
+            }
+            gui = new dat.GUI();
+            gui.add(controls, 'thickWalls').onChange(function (isThick) {
+                if (isThick) {
+                    WALL_THICKNESS = 3;
+                }
+                else
+                    WALL_THICKNESS = 0;
+                deleteWalls();
+                drawWalls(svgLabyrinth.children[2].children);
+            });
+            gui.add(controls, 'camera', ['unrestricted', 'top down', 'ball 3rd person']).onChange(function (value) {
+                isTopDown = false;
+                switch (value) {
+                    case 'unrestricted':
+                        orbitCam();
+                        break;
+                    case 'top down':
+                        orbitCamera.dispose()
+                        orbitCamera = null;
+                        topDown();
+                        break;
+                    case 'ball 3rd person':
+                        orbitCamera = null;
+                        break;
+                    default:
+                        break;
+                }
+            });
+            gui.add(controls, 'dolly').onChange(function (isEnabled) {
+                dollyZoom = false;
+                if (isEnabled && isTopDown){
+                    dollyZoom = true;
+                }
+            });
         }
 
 
+        function initCamera(x, y, z, target){
+            camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 2000);
+            camera.position.x = x;
+            camera.position.y = y;
+            camera.position.z = z;
+            camera.lookAt(target);
+        }
 
+        function orbitCam() {
+            initCamera(-100, 100, 100, pivot.position);
+            orbitCamera = new THREE.OrbitControls( camera, renderer.domElement );
+        }
+
+        function topDown(){
+            isTopDown = true;
+            initCamera(162,300,182, ball.position);
+            camera.fov = 30;
+            camera.updateProjectionMatrix();
+            
+            // orbitCamera = new THREE.OrbitControls( camera, renderer.domElement );
+            // orbitCamera.target = ball.position;
+        }
+
+        var fovMultiplier = 1.0048;
+        var zoomStep = -0.99
+        function dollyAnimation(){
+            var distanceToBall = camera.position.distanceTo(ball.position);
+            if (distanceToBall < 150 || distanceToBall > 450){
+                fovMultiplier = 1/fovMultiplier;
+                zoomStep *= -1;
+            }
+            camera.translateZ(zoomStep);
+            camera.fov *= fovMultiplier;
+            camera.updateProjectionMatrix();
+        }
+        
         $(function () {
             renderer.setClearColor(0xEEEEEE);
             renderer.setSize(window.innerWidth, window.innerHeight);
@@ -341,27 +445,15 @@
                 });
 
             buildCube(25, 5, 60, 5);
+            scene.add(ball);
 
-            camera.position.x = -100;
-            camera.position.y = 100;
-            camera.position.z = 100;
-            camera.lookAt(pivot.position);
-
-
-            var trackballControls = new THREE.TrackballControls(camera);
-
-            trackballControls.rotateSpeed = 1.0;
-            trackballControls.zoomSpeed = 1.0;
-            trackballControls.panSpeed = 1.0;
-            trackballControls.staticMoving = false;
-
+            // var trackballControls = new THREE.TrackballControls(camera, renderer.domElement);
             // var ambientLight = new THREE.AmbientLight(0x0c0c0c);
             var ambientLight = new THREE.AmbientLight(0xaaaaaa);
             scene.add(ambientLight);
 
             putLights();
-            addGui();
-
+            orbitCam();
 
             $("#WebGL-output").append(renderer.domElement);
 
@@ -369,11 +461,14 @@
 
             function render() {
                 var delta = clock.getDelta();
-                if (trackballControls) {
-                    trackballControls.update(delta);
+                if (orbitCamera != null) {
+                    orbitCamera.update(delta);
                 }
                 //webGLRenderer.clear();
                 // render using requestAnimationFrame
+                if (dollyZoom){
+                    dollyAnimation();
+                }
                 requestAnimationFrame(render);
                 renderer.render(scene, camera);
                 if (camera.position.distanceTo(pivot.position) < 30) {
@@ -386,8 +481,12 @@
                     rotateCube();
                 }
             }
+
         });
 
+        $(document).ready(function() {
+                addGui();
+            });
 
 
     </script>
