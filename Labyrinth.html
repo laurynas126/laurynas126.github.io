@@ -117,7 +117,7 @@
         function addGui() {
             var controls = new function () {
                 this.thickWalls = true;
-
+                this.camera = 0;
             }
             var gui = new dat.GUI();
             gui.add(controls, 'thickWalls').onChange(function (isThick) {
@@ -129,6 +129,8 @@
                 deleteWalls();
                 drawWalls(svgLabyrinth.children[2].children);
             });
+            // gui.add(controls, 'camera', ['unrestricted', 'top down', 'ball 3rd person']);
+            gui.add(controls, 'camera', {unrestricted:0, top:1, ball:2});
 
         }
 
@@ -367,7 +369,9 @@
 
             function render() {
                 var delta = clock.getDelta();
-                trackballControls.update(delta);
+                if (trackballControls) {
+                    trackballControls.update(delta);
+                }
                 //webGLRenderer.clear();
                 // render using requestAnimationFrame
                 requestAnimationFrame(render);
