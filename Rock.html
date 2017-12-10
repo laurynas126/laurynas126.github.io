@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+
+
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <title>Rock</title>
+    <script type="text/javascript" src="libs/three.js"></script>
+    <script type="text/javascript" src="libs/dat.gui.js"></script>
+    <script type="text/javascript" src="libs/TrackballControls.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+    <script src="libs/ConvexGeometry.js"></script>
+    <script src="libs/QuickHull.js"></script>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="WebGL-output">
+    </div>
+    <script type="text/javascript">
+        var scene = new THREE.Scene();
+        var camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 2000);
+        var trackballControls = new THREE.TrackballControls(camera);
+
+        var renderer = new THREE.WebGLRenderer();
+        var clock = new THREE.Clock();
+
+        var radius = 10;
+        var hullMesh;
+        function getPlane(x, z, width, height) {
+            var planeGeometry = new THREE.PlaneGeometry(width, height, 200, 200);
+            var planeMaterial = new THREE.MeshLambertMaterial({ color: 0xFFF000, side: THREE.DoubleSide });
+            // var planeMaterial = new THREE.MeshPhongMaterial({ color: 0xbbff00, side: THREE.DoubleSide  });
+            var plane = new THREE.Mesh(planeGeometry, planeMaterial);
+            planeGeometry.computeFaceNormals();
+            plane.receiveShadows = true;
+
+            planeMaterial.polygonOffset = true;
+            planeMaterial.polygonOffsetFactor = -3;
+
+            plane.rotation.x = -0.5 * Math.PI;
+            plane.position.x = x
+            plane.position.y = 0
+            plane.position.z = z
+
+            return plane;
+        }
+
+        function generatePoints(R, tubeD) {
+            var r = tubeD / 2;
+            var max = R + r ;
+            var min = -max;
+            var points = [];
+            while(points.length < 50) {
+                var X = (Math.random() * (max-min)) + min;
+                var Y = (Math.random() * tubeD*2) - tubeD;
+                var Z = (Math.random() * (max-min)) + min;
+
+                if ((X**2 + Y**2 + Z**2 - r**2)**2 <= 4*R**2*(X**2 + Z**2) ){
+                    points.push(new THREE.Vector3(X, Y, Z));
+                }
+            }
+
+            // use the same points to create a convexgeometry
+            var hullGeometry = new THREE.ConvexGeometry(points);
+
+            var cbmaterials = []; 
+            cbmaterials.push( new THREE.MeshBasicMaterial( { color: 0xffffff, side: THREE.DoubleSide }) );
+            cbmaterials.push( new THREE.MeshBasicMaterial( { color: 0x000000, side: THREE.DoubleSide }) );
+            // var l = hullGeometry.faces.length / 2;
+            // for( var i = 0; i < l; i ++ ) {
+            //     j = i * 2; // <-- Added this back so we can do every other 'face'
+            //     hullGeometry.faces[ j ].materialIndex = ((i + Math.floor(i/8)) % 2); // The code here is changed, replacing all 'i's with 'j's. KEEP THE 8
+            //     hullGeometry.faces[ j + 1 ].materialIndex = ((i + Math.floor(i/8)) % 2); // Add this line in, the material index should stay the same, we're just doing the other half of the same face
+            // }
+            //hullMesh = createMesh(hullGeometry);
+
+            var texture = new THREE.TextureLoader().load( "images/checkerboard-mini.png" );
+            texture.wrapS = THREE.RepeatWrapping;
+            texture.wrapT = THREE.RepeatWrapping;
+            texture.repeat.set( 4, 4 );
+            computeGeometry(hullGeometry);
+            //hullMesh = new THREE.Mesh( hullGeometry, new THREE.MeshFaceMaterial( cbmaterials ) );
+            hullMesh = new THREE.Mesh( hullGeometry, new THREE.MeshBasicMaterial({map: texture} ) );
+            
+            scene.add(hullMesh);
+        }
+
+        function computeGeometry(geometry){
+            geometry.computeBoundingBox();
+
+            var max = geometry.boundingBox.max,
+                min = geometry.boundingBox.min;
+            var offset = new THREE.Vector2(0 - min.x, 0 - min.y);
+            var range = new THREE.Vector2(max.x - min.x, max.y - min.y);
+            var faces = geometry.faces;
+
+            geometry.faceVertexUvs[0] = [];
+
+            for (var i = 0; i < faces.length ; i++) {
+
+                var v1 = geometry.vertices[faces[i].a], 
+                    v2 = geometry.vertices[faces[i].b], 
+                    v3 = geometry.vertices[faces[i].c];
+
+                geometry.faceVertexUvs[0].push([
+                    new THREE.Vector2(Math.atan2((v1.x + offset.x), range.x) ,Math.atan2((v1.y + offset.y), range.y)),
+                    new THREE.Vector2(Math.atan2((v2.x + offset.x), range.x) ,Math.atan2((v2.y + offset.y), range.y)),
+                    new THREE.Vector2(Math.atan2((v3.x + offset.x), range.x) ,Math.atan2((v3.y + offset.y), range.y))
+                    // new THREE.Vector2((v1.x + offset.x)/range.x ,(v1.y + offset.y)/range.y),
+                    // new THREE.Vector2((v2.x + offset.x)/range.x ,(v2.y + offset.y)/range.y),
+                    // new THREE.Vector2((v3.x + offset.x)/range.x ,(v3.y + offset.y)/range.y)
+                ]);
+                console.log((v1.x + offset.x)/range.x);
+                console.log(Math.atan2((v1.x + offset.x), range.x));
+
+                console.log((v1.y + offset.y)/range.x);
+
+                console.log(Math.atan2((v1.y + offset.y), range.y));
+                
+                
+            }
+            geometry.uvsNeedUpdate = true;
+        }
+
+        function getCube(){
+            var geom = new THREE.BoxGeometry(50,50,50);
+            var texture = new THREE.TextureLoader().load( "images/checkerboard.png" );
+            texture.wrapS = THREE.RepeatWrapping;
+            texture.wrapT = THREE.RepeatWrapping;
+            var material = new THREE.MeshBasicMaterial({map: texture} );
+            return new THREE.Mesh( geom, material );
+        }
+
+        function getBall(){
+            var geom = new THREE.SphereGeometry(5,32,32);
+            var texture = new THREE.TextureLoader().load( "images/football.png");
+            texture.wrapS = THREE.RepeatWrapping;
+            texture.wrapT = THREE.RepeatWrapping;
+            var material = new THREE.MeshBasicMaterial({map: texture} );
+            return new THREE.Mesh( geom, material );
+        }
+
+        function createMesh(geom) {
+
+            // assign two materials
+            var meshMaterial = new THREE.MeshBasicMaterial({color: 0x00ff00, transparent: true, opacity: 0.8});
+            meshMaterial.side = THREE.DoubleSide;
+            var wireFrameMat = new THREE.MeshBasicMaterial();
+            wireFrameMat.wireframe = true;
+
+            // create a multimaterial
+            var mesh = THREE.SceneUtils.createMultiMaterialObject(geom, [meshMaterial, wireFrameMat]);
+
+            return mesh;
+        }
+        
+        function init() {
+            $("#WebGL-output").append(renderer.domElement);
+            renderer.setClearColor(0xEEEEEE);
+            renderer.shadowMap.enabled = true;
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            //Init starting camera position and controls
+            cameraInit();
+
+            //Add ambient light
+            var ambientLight = new THREE.AmbientLight(0xaaaaaa);
+            scene.add(ambientLight);
+            //scene.add(getWireframeTorus(radius, 6));
+            generatePoints(radius, 6);
+            scene.add(getBall());
+            trackballControls.target = hullMesh.position;
+            //render();
+        }
+
+        function getWireframeTorus(R, D){
+            var torusGeom = new THREE.TorusGeometry(R, D, 16, 32);
+            var material = new THREE.MeshBasicMaterial({
+                color: 0x00ff00,
+                wireframe: true
+            });
+            var torus = new THREE.Mesh(torusGeom, material);
+            torus.rotation.x = -0.5 * Math.PI;
+            return torus;
+        }
+
+        function cameraInit() {
+            camera.position.x = -20;
+            camera.position.y = 50;
+            camera.position.z = 50;
+            trackballControls.rotateSpeed = 1.0;
+            trackballControls.zoomSpeed = 1.0;
+            trackballControls.panSpeed = 1.0;
+            trackballControls.staticMoving = false;
+        }
+        function render() {
+            var delta = clock.getDelta();
+            trackballControls.update(delta);
+            //webGLRenderer.clear();
+            // render using requestAnimationFrame
+            requestAnimationFrame(render);
+            renderer.render(scene, camera);
+        }
+
+        $(document).ready(function() {
+            render();
+        });
+        init();        
+    </script>
+</body>
+
+</html>
