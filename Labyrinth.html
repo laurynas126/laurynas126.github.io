@@ -25,7 +25,6 @@
     </div>
     <script type="text/javascript">
         var svgManager = new THREE.SVGLoader();
-        //var svgUrl = 'https://klevas.mif.vu.lt/~rimask/geometrija/maze_4.svg';
         var svgUrl = 'resources/maze_4.svg';
         var svgLabyrinth = null;
         var labyrinthMesh;
@@ -54,9 +53,6 @@
         var isTopDown = false;
         var dollyZoom = false;
         
-
-
-
         function buildSVG(svgDocument) {
             console.log("Loaded");
             svgLabyrinth = svgDocument;
@@ -79,7 +75,6 @@
                 scene.add(wall);
                 WALL_LIST.push(wall);
             }
-            addExtraWalls();
         }
 
         function addExtraWalls() {
@@ -100,55 +95,60 @@
         }
 
         function getWall(x, y, z, lenX, lenY, lenZ, thickness) {
-            x = x + lenX / 2;
-            z = z + (thickness + lenZ) / 2;
             var boxGeom = new THREE.BoxGeometry(lenX + thickness, lenY, lenZ + thickness, 1, 1);
-            addGeometryUvs(boxGeom);
-            var boxMat = new THREE.MeshLambertMaterial();
-            var texture = new THREE.TextureLoader().load("images/texture-atlas.jpg");
-            texture.wrapS = THREE.RepeatWrapping;
-            texture.wrapT = THREE.RepeatWrapping;
-            boxMat.map = texture;
-            boxMat.polygonOffset = true;
-            if (lenZ == 0) {
-                boxMat.polygonOffsetFactor = -0.5;
-            }
-            var box = new THREE.Mesh(boxGeom, boxMat);
-            box.position.x = x;
+            // addGeometryUvs(boxGeom);
+            var materials = texturizedMaterials(x, z, lenX, lenZ, thickness);
+            materials.forEach(element => {
+                element.polygonOffset = true;
+                if (lenZ == 0) {
+                    element.polygonOffsetFactor = -1;
+                }
+            });
+            var box = new THREE.Mesh(boxGeom, materials);
+            box.position.x = x + lenX / 2;
             box.position.y = y;
-            box.position.z = z;
+            box.position.z = z + (thickness + lenZ) / 2;
             box.castShadow = true;
             return box;
         }
 
-        function addGeometryUvs(geo){
-            var bricks = [new THREE.Vector2(0, .666), new THREE.Vector2(.5, .666), new THREE.Vector2(.5, 1), new THREE.Vector2(0, 1)];
-            var clouds = [new THREE.Vector2(.5, .666), new THREE.Vector2(1, .666), new THREE.Vector2(1, 1), new THREE.Vector2(.5, 1)];
-            var crate = [new THREE.Vector2(0, .333), new THREE.Vector2(.5, .333), new THREE.Vector2(.5, .666), new THREE.Vector2(0, .666)];
-            var stone = [new THREE.Vector2(.5, .333), new THREE.Vector2(1, .333), new THREE.Vector2(1, .666), new THREE.Vector2(.5, .666)];
-            var water = [new THREE.Vector2(0, 0), new THREE.Vector2(.5, 0), new THREE.Vector2(.5, .333), new THREE.Vector2(0, .333)];
-            var wood = [new THREE.Vector2(.5, 0), new THREE.Vector2(1, 0), new THREE.Vector2(1, .333), new THREE.Vector2(.5, .333)];
-            geo.faceVertexUvs[0][0] = [ bricks[0], bricks[1], bricks[3] ];
-            geo.faceVertexUvs[0][1] = [ bricks[1], bricks[2], bricks[3] ];
-            geo.faceVertexUvs[0][2] = [ clouds[0], clouds[1], clouds[3] ];
-            geo.faceVertexUvs[0][3] = [ clouds[1], clouds[2], clouds[3] ];
-            geo.faceVertexUvs[0][4] = [ crate[0], crate[1], crate[3] ];
-            geo.faceVertexUvs[0][5] = [ crate[1], crate[2], crate[3] ];
-            geo.faceVertexUvs[0][6] = [ stone[0], stone[1], stone[3] ];
-            geo.faceVertexUvs[0][7] = [ stone[1], stone[2], stone[3] ];
-            geo.faceVertexUvs[0][8] = [ water[0], water[1], water[3] ];
-            geo.faceVertexUvs[0][9] = [ water[1], water[2], water[3] ];
-            geo.faceVertexUvs[0][10] = [ wood[0], wood[1], wood[3] ];
-            geo.faceVertexUvs[0][11] = [ wood[1], wood[2], wood[3] ];
+        function texturizedMaterials(x, z, lenX, lenZ, thickness) {
+            var materials = [];
+            var multiplier = 12.8;
+            var repeatX = (lenX+thickness)/multiplier;
+            var repeatZ = (lenZ+thickness)/multiplier
+            var offsetX = (x % multiplier)/multiplier;
+            var offsetZ = (z % multiplier)/multiplier;
+
+            var boxLeft = getTexturizedMaterial("images/water.jpg", repeatZ, 1, offsetZ, 0);
+            materials.push(boxLeft);
+            var boxLeft2 = getTexturizedMaterial("images/cloud.jpg", repeatZ, 1, offsetZ, 0);
+            materials.push(boxLeft2);
+            var boxTop = getTexturizedMaterial("images/box.jpg", repeatX, repeatZ, offsetX, offsetZ);
+            materials.push(boxTop);
+            var boxBottom = getTexturizedMaterial("images/box.jpg", repeatX, repeatZ, offsetX, offsetZ);
+            materials.push(boxBottom);
+            var boxUp = getTexturizedMaterial("images/bricks.jpg", repeatX, 1, offsetX, 0);
+            materials.push(boxUp);
+            var boxUp2 = getTexturizedMaterial("images/stone.jpg", repeatX, 1, offsetX, 0);
+            materials.push(boxUp2);
+            return materials;
         }
 
-        function deleteWalls() {
-            WALL_LIST.forEach(function (element) {
-                scene.remove(element);
-            }, this);
+        function getTexturizedMaterial(textureURL, repeatU, repeatV, offsetU, offsetV){
+            var material = new THREE.MeshLambertMaterial();
+            material.map = getTexture(textureURL, repeatU, repeatV, offsetU, offsetV);
+            return material;
         }
 
-
+        function getTexture(textureURL, repeatU, repeatV, offsetU, offsetV){
+            var texture = new THREE.TextureLoader().load(textureURL);
+            texture.wrapS = THREE.RepeatWrapping;
+            texture.wrapT = THREE.RepeatWrapping;
+            texture.repeat.set(repeatU, repeatV);
+            texture.offset.set(offsetU, offsetV);
+            return texture;
+        }
 
         function getPlane(x, z, width, height) {
             var planeGeometry = new THREE.PlaneGeometry(width, height, 200, 200);
@@ -193,7 +193,7 @@
             var x = -2.5;
             var y = x;
             var z = x;
-            var split = 4;
+            var split = 1;
             var faceLen = size / split;
             for (var index = 0; index < split; index++) {
                 for (var j = 0; j < split; j++) {
@@ -376,12 +376,13 @@
                         orbitCam();
                         break;
                     case 'top down':
-                        orbitCamera.dispose()
+                        orbitCamera.dispose();
                         orbitCamera = null;
                         topDown();
                         break;
                     case 'ball 3rd person':
                         orbitCamera = null;
+                        ballFollowCam();
                         break;
                     default:
                         break;
@@ -413,17 +414,23 @@
             isTopDown = true;
             initCamera(162,300,182, ball.position);
             camera.fov = 30;
-            camera.updateProjectionMatrix();
-            
+            camera.updateProjectionMatrix();       
             // orbitCamera = new THREE.OrbitControls( camera, renderer.domElement );
             // orbitCamera.target = ball.position;
+        }
+
+        function ballFollowCam(){
+            var target = ball.position.clone();
+            target.y += 10;
+            initCamera(ball.position.x - 20, ball.position.y + 20, ball.position.z - 20, target);
+            camera.fov = 60;
         }
 
         var fovMultiplier = 1.0048;
         var zoomStep = -0.99
         function dollyAnimation(){
             var distanceToBall = camera.position.distanceTo(ball.position);
-            if (distanceToBall < 150 || distanceToBall > 450){
+            if (distanceToBall < 150 || distanceToBall > 350){
                 fovMultiplier = 1/fovMultiplier;
                 zoomStep *= -1;
             }
@@ -466,7 +473,7 @@
                 }
                 //webGLRenderer.clear();
                 // render using requestAnimationFrame
-                if (dollyZoom){
+                if (isTopDown && dollyZoom){
                     dollyAnimation();
                 }
                 requestAnimationFrame(render);

@@ -54,10 +54,10 @@
 
         function generatePoints(R, tubeD) {
             var r = tubeD / 2;
-            var max = R + r ;
+            var max = 2*(R + r) ;
             var min = -max;
             var points = [];
-            while(points.length < 50) {
+            while(points.length < 200) {
                 var X = (Math.random() * (max-min)) + min;
                 var Y = (Math.random() * tubeD*2) - tubeD;
                 var Z = (Math.random() * (max-min)) + min;
@@ -65,10 +65,11 @@
                 if ((X**2 + Y**2 + Z**2 - r**2)**2 <= 4*R**2*(X**2 + Z**2) ){
                     points.push(new THREE.Vector3(X, Y, Z));
                 }
-            }
+            }   
 
             // use the same points to create a convexgeometry
             var hullGeometry = new THREE.ConvexGeometry(points);
+            // var hullGeometry = new THREE.SphereGeometry(R, 32, 32);
 
             var cbmaterials = []; 
             cbmaterials.push( new THREE.MeshBasicMaterial( { color: 0xffffff, side: THREE.DoubleSide }) );
@@ -105,30 +106,21 @@
 
             for (var i = 0; i < faces.length ; i++) {
 
-                var v1 = geometry.vertices[faces[i].a], 
-                    v2 = geometry.vertices[faces[i].b], 
-                    v3 = geometry.vertices[faces[i].c];
-
+                var v1 = geometry.vertices[faces[i].a].clone(), 
+                    v2 = geometry.vertices[faces[i].b].clone(), 
+                    v3 = geometry.vertices[faces[i].c].clone();
+                v1 = v1.normalize();
+                v2 = v2.normalize();
+                v3 = v3.normalize();
                 geometry.faceVertexUvs[0].push([
-                    new THREE.Vector2(Math.atan2((v1.x + offset.x), range.x) ,Math.atan2((v1.y + offset.y), range.y)),
-                    new THREE.Vector2(Math.atan2((v2.x + offset.x), range.x) ,Math.atan2((v2.y + offset.y), range.y)),
-                    new THREE.Vector2(Math.atan2((v3.x + offset.x), range.x) ,Math.atan2((v3.y + offset.y), range.y))
-                    // new THREE.Vector2((v1.x + offset.x)/range.x ,(v1.y + offset.y)/range.y),
-                    // new THREE.Vector2((v2.x + offset.x)/range.x ,(v2.y + offset.y)/range.y),
-                    // new THREE.Vector2((v3.x + offset.x)/range.x ,(v3.y + offset.y)/range.y)
-                ]);
-                console.log((v1.x + offset.x)/range.x);
-                console.log(Math.atan2((v1.x + offset.x), range.x));
-
-                console.log((v1.y + offset.y)/range.x);
-
-                console.log(Math.atan2((v1.y + offset.y), range.y));
-                
-                
+                    new THREE.Vector2(Math.atan2(v1.z, v1.x) /(2*Math.PI) + 0.5 , v1.y*0.5 + 0.5),
+                    new THREE.Vector2(Math.atan2(v2.z, v2.x) /(2*Math.PI) + 0.5 , v2.y*0.5 + 0.5),
+                    new THREE.Vector2(Math.atan2(v3.z, v3.x) /(2*Math.PI) + 0.5 , v3.y*0.5 + 0.5)
+                ]);         
+                // Math.asin(v3.y)/Math.PI     
             }
             geometry.uvsNeedUpdate = true;
         }
-
         function getCube(){
             var geom = new THREE.BoxGeometry(50,50,50);
             var texture = new THREE.TextureLoader().load( "images/checkerboard.png" );
