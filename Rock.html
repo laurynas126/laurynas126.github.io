@@ -74,20 +74,12 @@
             var cbmaterials = []; 
             cbmaterials.push( new THREE.MeshBasicMaterial( { color: 0xffffff, side: THREE.DoubleSide }) );
             cbmaterials.push( new THREE.MeshBasicMaterial( { color: 0x000000, side: THREE.DoubleSide }) );
-            // var l = hullGeometry.faces.length / 2;
-            // for( var i = 0; i < l; i ++ ) {
-            //     j = i * 2; // <-- Added this back so we can do every other 'face'
-            //     hullGeometry.faces[ j ].materialIndex = ((i + Math.floor(i/8)) % 2); // The code here is changed, replacing all 'i's with 'j's. KEEP THE 8
-            //     hullGeometry.faces[ j + 1 ].materialIndex = ((i + Math.floor(i/8)) % 2); // Add this line in, the material index should stay the same, we're just doing the other half of the same face
-            // }
-            //hullMesh = createMesh(hullGeometry);
 
-            var texture = new THREE.TextureLoader().load( "images/checkerboard-mini.png" );
+            var texture = new THREE.TextureLoader().load( "images/Checkerboard-mini.png" );
             texture.wrapS = THREE.RepeatWrapping;
             texture.wrapT = THREE.RepeatWrapping;
             texture.repeat.set( 4, 4 );
             computeGeometry(hullGeometry);
-            //hullMesh = new THREE.Mesh( hullGeometry, new THREE.MeshFaceMaterial( cbmaterials ) );
             hullMesh = new THREE.Mesh( hullGeometry, new THREE.MeshBasicMaterial({map: texture} ) );
             
             scene.add(hullMesh);
@@ -120,23 +112,6 @@
                 // Math.asin(v3.y)/Math.PI     
             }
             geometry.uvsNeedUpdate = true;
-        }
-        function getCube(){
-            var geom = new THREE.BoxGeometry(50,50,50);
-            var texture = new THREE.TextureLoader().load( "images/checkerboard.png" );
-            texture.wrapS = THREE.RepeatWrapping;
-            texture.wrapT = THREE.RepeatWrapping;
-            var material = new THREE.MeshBasicMaterial({map: texture} );
-            return new THREE.Mesh( geom, material );
-        }
-
-        function getBall(){
-            var geom = new THREE.SphereGeometry(5,32,32);
-            var texture = new THREE.TextureLoader().load( "images/football.png");
-            texture.wrapS = THREE.RepeatWrapping;
-            texture.wrapT = THREE.RepeatWrapping;
-            var material = new THREE.MeshBasicMaterial({map: texture} );
-            return new THREE.Mesh( geom, material );
         }
 
         function createMesh(geom) {
