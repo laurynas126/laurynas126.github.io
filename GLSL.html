@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+
+
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <title>Rock</title>
+    <script type="text/javascript" src="libs/three.js"></script>
+    <script type="text/javascript" src="libs/dat.gui.js"></script>
+    <script type="text/javascript" src="libs/TrackballControls.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="container">
+    </div>
+    <script type="x-shader/x-vertex" id="vertexShader">
+        
+        precision mediump float;
+        
+        uniform float uScale;
+        uniform float uEdge;
+        varying vec2 vUv;
+        
+        void main(void) {
+            vUv = uv;
+            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0 );
+        }
+    </script>
+
+    <script type="x-shader/x-vertex" id="fragmentShader">
+        precision mediump float;
+        
+        uniform float time;
+        uniform float uScale;
+        uniform vec2 resolution;
+        varying vec2 vUv;
+        
+        #extension GL_OES_standard_derivatives : enable
+        void main() {
+          float u = vUv.x * uScale;
+          float v = vUv.y * uScale;
+          u = fract(u);
+          v = fract(v);
+          if (u >= v){
+            if (u + v > 1.0){
+                gl_FragColor = vec4(0.0,0.0,1.0,1.0);
+              }
+            else {
+                  gl_FragColor = vec4(0.0,1.0,1.0,1.0);
+            }
+          }
+          else {
+            if (u + v > 1.0){
+                gl_FragColor = vec4(1.0,0.0,0.0,1.0);
+              }
+            else {
+                  gl_FragColor = vec4(1.0,1.0,0.0,1.0);
+            }
+          }	
+        }
+    </script>
+
+    <script type="text/javascript" id="mainCode">
+
+        var
+            control,
+            container,
+            renderer,
+            scene,
+            camera,
+            mesh,
+            start = Date.now(),
+            fov = 30;
+
+        window.addEventListener('load', function () {
+
+            container = document.getElementById("container");
+
+            scene = new THREE.Scene();
+
+            camera = new THREE.PerspectiveCamera(
+                fov,
+                window.innerWidth / window.innerHeight,
+                1,
+                10000);
+            camera.position.z = 100;
+            camera.target = new THREE.Vector3(0, 0, 0);
+
+            scene.add(camera);
+
+            material = new THREE.ShaderMaterial({
+                uniforms: {
+                    uScale: { type: 'f', value: 1.0 }
+                },
+                vertexShader: document.getElementById('vertexShader').textContent,
+                fragmentShader: document.getElementById('fragmentShader').textContent
+            });
+
+            var geo = new THREE.PlaneGeometry(20, 20, 32, 32, 32);
+            mesh = new THREE.Mesh(geo, material);
+            scene.add(mesh);
+
+            // MENU    
+            control = new function () {
+                this.scale = 1.0;
+            }
+
+            var gui = new dat.GUI();
+            gui.add(control, 'scale', 1.0, 10.0);  
+
+            renderer = new THREE.WebGLRenderer();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+
+            container.appendChild(renderer.domElement);
+            controls = new THREE.TrackballControls(camera, renderer.domElement);
+            render();
+
+        });
+
+        function render() {
+            material.uniforms.uScale.value = control.scale; 
+            renderer.render(scene, camera);
+            requestAnimationFrame(render);
+            controls.update();
+        }        
+    </script>
+</body>
+
+</html>
