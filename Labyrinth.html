@@ -116,6 +116,12 @@
             return box;
         }
 
+        function deleteWalls() {
+            WALL_LIST.forEach(function (element) {
+                scene.remove(element);
+            }, this);
+        }
+
         function texturizedMaterials(x, z, lenX, lenZ, thickness) {
             var materials = [];
             var multiplier = 12.8;
