@@ -34,7 +34,10 @@
         var renderer = new THREE.WebGLRenderer();
         var orbitCamera = null;
         var clock = new THREE.Clock();
-        var ball = getBall();
+        var ballR = 4;
+        var ballC = 2 * ballR * Math.PI;
+        var ball = getBall(ballR);
+        var ballTrajectory = getBallTrajectory();
 
         var cubeFaces = [];
         var pivot = new THREE.Group();
@@ -52,6 +55,7 @@
 
         var isTopDown = false;
         var dollyZoom = false;
+        var ballCam = false;
         
         function buildSVG(svgDocument) {
             console.log("Loaded");
@@ -299,18 +303,165 @@
             return sphere;
         }
 
-        function getBall(){
-            var geom = new THREE.SphereGeometry(4,24,24);
+        function getBall(R){
+            var geom = new THREE.SphereGeometry(R,24,24);
             var texture = new THREE.TextureLoader().load( "images/football.png");
             texture.wrapS = THREE.RepeatWrapping;
             texture.wrapT = THREE.RepeatWrapping;
             var material = new THREE.MeshBasicMaterial({map: texture} );
             var mesh = new THREE.Mesh( geom, material );
-            mesh.position.x = 155;
-            mesh.position.y = 3;
+            mesh.position.x = ballStartPosition().x;
+            mesh.position.z = ballStartPosition().z;
+            mesh.position.y = R;
             return mesh;
         }
 
+        function ballStartPosition(){
+            return {x: 154, z: 3};
+        }
+  
+        function getBallTrajectory(){
+            var stepsize = 0.25;
+            var points = [
+                ballStartPosition(),
+                {x: 154, z: 12},
+                {x: 107, z: 12},
+                {x: 107, z: 28},
+                {x: 91, z: 28},
+                {x: 91, z: 13},
+                {x: 75, z: 13},
+                {x: 75, z: 44},
+                {x: 138, z: 44},
+                {x: 138, z: 76},
+                {x: 154, z: 76},
+                {x: 154, z: 44},
+                {x: 185, z: 44},
+                {x: 185, z: 60},
+                {x: 171, z: 60},
+                {x: 171, z: 76},
+                {x: 202, z: 76},
+                {x: 202, z: 44},
+                {x: 218, z: 44},
+                {x: 218, z: 29},
+                {x: 265, z: 29},
+                {x: 265, z: 44},
+                {x: 251, z: 44},
+                {x: 251, z: 60},
+                {x: 265, z: 60},
+                {x: 265, z: 92},
+                {x: 265, z: 92},
+                {x: 251, z: 92},
+                {x: 251, z: 77},
+                {x: 235, z: 77},
+                {x: 235, z: 60},
+                {x: 235, z: 60},
+                {x: 219, z: 60},
+                {x: 219, z: 91},
+                {x: 155, z: 91},
+                {x: 155, z: 123},
+                {x: 155, z: 123},
+                {x: 122, z: 123},
+                {x: 122, z: 107},
+                {x: 107, z: 107},
+                {x: 107, z: 123},
+                {x: 90, z: 123},
+                {x: 90, z: 139},
+                {x: 122, z: 139},
+                {x: 122, z: 155},
+                {x: 138, z: 155},
+                {x: 138, z: 187},
+                {x: 122, z: 187},
+                {x: 122, z: 205},
+                {x: 234, z: 205},
+                {x: 234, z: 190},
+                {x: 250, z: 190},
+                {x: 250, z: 204},
+                {x: 297, z: 204},
+                {x: 297, z: 222},
+                {x: 266, z: 222},
+                {x: 266, z: 237},
+                {x: 250, z: 237},
+                {x: 250, z: 269},
+                {x: 282, z: 269},
+                {x: 282, z: 237},
+                {x: 298, z: 237},
+                {x: 298, z: 253},
+                {x: 313, z: 253},
+                {x: 313, z: 269},
+                {x: 298, z: 269},
+                {x: 298, z: 302},
+                {x: 267, z: 302},
+                {x: 267, z: 287},
+                {x: 250, z: 287},
+                {x: 250, z: 317},
+                {x: 234, z: 317},
+                {x: 234, z: 302},
+                {x: 219, z: 302},
+                {x: 219, z: 270},
+                {x: 170, z: 270},
+                {x: 170, z: 285},
+                {x: 201, z: 285},
+                {x: 201, z: 317},
+                {x: 170, z: 317},
+                {x: 170, z: 342},
+            ];
+            var dots = [];
+            for (let i = 1; i < points.length; i++) {
+                var delta = subPoints(points[i], points[i-1]);
+                while (Math.abs(delta.x) > stepsize/2 || Math.abs(delta.z) > stepsize/2){
+                    if (delta.x > 0) {
+                        dots.push({x:stepsize, z:0});
+                        delta.x = delta.x - stepsize;
+                    }
+                    else if (delta.x < 0){
+                        dots.push({x:-stepsize, z:0});
+                        delta.x = delta.x + stepsize;
+                    }
+                    if (delta.z > 0){
+                        dots.push({x:0, z:stepsize});
+                        delta.z = delta.z - stepsize;
+                    }
+                    else if (delta.z < 0){
+                        dots.push({x:0, z:-stepsize});
+                        delta.z = delta.z + stepsize;
+                    }
+                }
+            }
+            return dots;
+        }
+
+        function subPoints(a,b){
+            return {x:(a.x - b.x), z:(a.z - b.z)};
+        }
+
+        function moveBall(){
+            var nextMove = ballTrajectory.shift();
+            ball.position.x += (nextMove.x);
+            ball.rotateOnWorldAxis(new THREE.Vector3(0,0,1), - nextMove.x * 2 * Math.PI / ballC);
+            ball.position.z += (nextMove.z);
+            ball.rotateOnWorldAxis(new THREE.Vector3(1,0,0),nextMove.z * 2 * Math.PI / ballC);
+            updateCameras(nextMove);
+        }
+        
+        function updateCameras(nextMove){
+            if (ballCam || isTopDown){
+                var target = ball.position.clone();
+                target.y += 10;
+                camera.lookAt(target);
+            }
+            if (ballCam){
+                camera.position.x = ball.position.x - nextMove.x*30;
+                camera.position.z = ball.position.z - nextMove.z*30;
+            }
+            if (ballCam && ballTrajectory.length >= 6){
+                camera.position.x -= ballTrajectory[1].x*15 + ballTrajectory[2].x*15 
+                                   + ballTrajectory[3].x*15 + ballTrajectory[4].x*8 
+                                   + ballTrajectory[5].x*6 + ballTrajectory[6].x*3;
+                camera.position.z -= ballTrajectory[1].z*15 + ballTrajectory[2].z*15 
+                                   + ballTrajectory[3].z*15 + ballTrajectory[4].z*8
+                                   + ballTrajectory[5].z*6 + ballTrajectory[6].z*3;
+            }
+        }
         function getPost(x, y, z) {
             var boxGeom = new THREE.BoxGeometry(1, y - 1, 1);
             var boxMat = new THREE.MeshBasicMaterial({ color: 0x000000 });
@@ -371,12 +522,12 @@
             });
             gui.add(controls, 'camera', ['unrestricted', 'top down', 'ball 3rd person']).onChange(function (value) {
                 isTopDown = false;
+                ballCam = false;
                 switch (value) {
                     case 'unrestricted':
                         orbitCam();
                         break;
                     case 'top down':
-                        orbitCamera.dispose();
                         orbitCamera = null;
                         topDown();
                         break;
@@ -415,15 +566,16 @@
             initCamera(162,300,182, ball.position);
             camera.fov = 30;
             camera.updateProjectionMatrix();       
-            // orbitCamera = new THREE.OrbitControls( camera, renderer.domElement );
-            // orbitCamera.target = ball.position;
         }
 
         function ballFollowCam(){
+            ballCam = true;
             var target = ball.position.clone();
             target.y += 10;
-            initCamera(ball.position.x - 20, ball.position.y + 20, ball.position.z - 20, target);
-            camera.fov = 60;
+            initCamera(ball.position.x, ball.position.y + 25, ball.position.z, target);
+            camera.fov = 75;
+            camera.updateProjectionMatrix();       
+            
         }
 
         var fovMultiplier = 1.0048;
@@ -487,6 +639,7 @@
                 else {
                     rotateCube();
                 }
+                if (ballTrajectory.length != 0) moveBall();
             }
 
         });
