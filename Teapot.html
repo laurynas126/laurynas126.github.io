@@ -32,13 +32,15 @@
     </script>
  
     <script type="x-shader/x-vertex" id="fragmentShader">
-	precision mediump float;	
+    #extension GL_OES_standard_derivatives : enable
+    precision mediump float;    
 
-	varying vec3 vPosition; 
-	varying vec3 vNormal; 
+    uniform float uEdge;
+    varying vec3 vPosition; 
+    varying vec3 vNormal; 
     varying vec2 vUv;
-	uniform float dx, dy, dz;
-	
+    uniform float dx, dy, dz;
+    
 	void main() {
 		vec3 lightDir = normalize(vec3(dx,dy,dz)); 
 		float intensity = dot(lightDir,normalize(vNormal));
@@ -47,6 +49,12 @@
         float v = vUv.y *10.0;
         u = fract(u);
         v = fract(v);
+        vec3 color2;
+        vec3 color3;
+        float f = u*(u-0.5+v-0.5)*(u-1.0)*(v-1.0);
+        float grad = length(vec2(dFdx(f),dFdy(f))); 
+        float d = uEdge*grad;
+        float edgeFactor = smoothstep(-d, d, f);
         if (vPosition.y < 4.0 && vPosition.y > 0.0 && vPosition.x < 18.0 && vPosition.x > -18.0)
         {
             if (u >= v){
@@ -56,6 +64,8 @@
                 else {
                     color = vec3(0.0,1.0,1.0);
                 }
+                color = mix(vec3(0.0,0.0,1.0),vec3(0.0,1.0,1.0),edgeFactor);
+
             }
             else {
                 if (u + v > 1.0){
@@ -64,6 +74,7 @@
                 else {
                     color = vec3(1.0,1.0,0.0);
                 }
+                color = mix(vec3(1.0,0.0,0.0),vec3(1.0,1.0,0.0),edgeFactor);
             }
         }
         color = vec3(color.x*intensity,color.y*intensity,color.z*intensity);
@@ -104,7 +115,7 @@ window.addEventListener( 'load', function() {
 			dx: {type: 'f', value:  0.0}, 
 			dy: {type: 'f', value:  0.0}, 
 			dz: {type: 'f', value:  1.0},
-            uScale: { type: 'f', value: 1.0 }
+            uEdge: { type: 'f', value: 0.0 }
         },
         vertexShader: document.getElementById( 'vertexShader' ).textContent,
         fragmentShader: document.getElementById( 'fragmentShader' ).textContent  
@@ -120,13 +131,13 @@ window.addEventListener( 'load', function() {
         this.x = 0.5;
         this.y = 0.5;
         this.z = 1.0;
-        //this.scale = 1.0;
+        this.edge = 0.0;
     }
 	var gui = new dat.GUI();
     gui.add(control, 'x', -1.0, 1.0);    
     gui.add(control, 'y', -1.0, 1.0);    
     gui.add(control, 'z', 1.0, 2.0); 
-    //gui.add(control, 'scale', 1.0, 10.0);  
+    gui.add(control, 'edge', 0.0, 10.0);  
    
     renderer = new THREE.WebGLRenderer();
     renderer.setSize( window.innerWidth, window.innerHeight );
@@ -142,7 +153,7 @@ function render() {
     material.uniforms.dx.value = control.x; 
     material.uniforms.dy.value = control.y; 
     material.uniforms.dz.value = control.z; 
-    //material.uniforms.uScale.value = control.scale; 
+    material.uniforms.uEdge.value = control.edge; 
 
     // render
     renderer.render( scene, camera );

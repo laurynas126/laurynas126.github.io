@@ -1,0 +1,210 @@
+<html>
+    <head>
+        <title>Teapot with Texture</title>
+        <meta charset="utf-8">
+</head>
+ 
+    <body>
+        <div id="container"></div>
+    </body>
+   
+    
+    <script src="libs/three.min.js"></script>
+    <script src="libs/TrackballControls.js"></script>
+	<script src="libs/dat.gui.js"></script>
+    <script src="libs/TeapotGeometry.js"></script>
+
+    <script type="x-shader/x-vertex" id="vertexShader">
+
+        precision mediump float;
+    
+        varying vec3 vPosition; 
+        varying vec3 vPosInCamera;
+        varying vec3 vNormal; 
+        varying vec2 vUv;
+        varying vec3 vTangent; 
+        uniform float uDirX, uDirY, uShininess;
+        
+        void main(void) {
+            vUv = uv;
+            vNormal = normalMatrix * normal;
+            vPosition = position;
+            vPosInCamera = (viewMatrix * modelMatrix * vec4(position, 1.0 )).xyz;
+            vTangent = (modelViewMatrix * vec4(position, 0.0 )).xyz;
+            //vTangent = vPosInCamera;
+            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0 );         
+        }
+        </script>
+     
+        <script type="x-shader/x-vertex" id="fragmentShader">
+        precision mediump float;	
+    
+        varying vec3 vPosition; 
+        varying vec3 vPosInCamera;	
+        varying vec3 vNormal; 
+        varying vec2 vUv;
+        varying vec3 vTangent; 
+        uniform float uDirX, uDirY, uShininess;
+
+        void pyramidMap(float u1, float v1, vec3 biTangent, out vec3 normalMap);
+
+        
+        void main() {
+    
+            vec3 nNormal = normalize(vNormal);        
+            vec3 ambColor = vec3(0.1,0.1,0.1);
+            vec3 diffColor = vec3(0.6,0.6,0.6);
+            vec3 specColor = vec3(0.4,0.4,0.3);
+    
+            vec3 lightDir = normalize(vec3(uDirX,uDirY,1.0));
+            
+            vec3 biTangent = cross(vNormal,vTangent);
+            float scale = 5.0;
+            float u = (vUv.x) * scale;
+            float v = (vUv.y) * scale;
+            u = (fract(u));
+            v = (fract(v));
+            vec3 normalMap = normalize(vNormal); 
+            if (vPosition.y > 8.3 && (vPosition.z*vPosition.z + vPosition.x*vPosition.x) < 170.0 || vPosition.y < -14.0)
+            {
+                //lightDir = normalize(vec3(uShininess,0.2,1.0)); 
+                
+                //Spheres
+                float u1 = u - 0.75;
+                float v1 = v - 0.25;
+                float h = 0.02 - u1*u1 - v1*v1; 
+                if ( h > 0.0)  
+                normalMap = sqrt(h)*6.5*vNormal + u1*vTangent + v1*biTangent;
+        
+                u1 = u - 0.25;
+                v1 = v - 0.75;
+                h = 0.02 - u1*u1 - v1*v1; 
+                if ( h > 0.0)  
+                    normalMap = sqrt(h)*6.5*vNormal + u1*vTangent + v1*biTangent;
+        
+                //Pyramids
+                if (u < 0.5 && v < 0.5)
+                {
+                    u1 = u - 0.25;
+                    v1 = v - 0.25;
+                    pyramidMap(u1, v1, biTangent, normalMap);
+                }
+                else if (u > 0.5 && v > 0.5)
+                {
+                    u1 = u - 0.75;
+                    v1 = v - 0.75;
+                    pyramidMap(u1, v1, biTangent, normalMap);
+                }
+            }
+
+            float diffLightWeight = max(dot(normalMap,lightDir),0.0);		
+            vec3 eyeDir = normalize(-vPosInCamera);
+            vec3 reflDir = -reflect(lightDir, nNormal);
+            float specLightWeight = pow(max(dot(reflDir, eyeDir), 0.0), uShininess);
+            vec3 lightWeight = ambColor + diffColor * diffLightWeight 
+                + specColor * specLightWeight;                
+            vec3 color = lightWeight;
+            gl_FragColor = vec4(color,1.0);   
+        }
+
+        void pyramidMap(float u1, float v1, vec3 biTangent, out vec3 normalMap)
+        {
+            float L = 0.75;
+            if ( u1 < v1)  
+            {
+                    normalMap = normalize(vNormal - L*vTangent);
+                    if (u1 + v1 > 0.0)
+                    {
+                        normalMap = normalize(vNormal + L*biTangent);
+                    }
+            } 
+            else if (u1 + v1 < 0.0)
+            {
+                normalMap = normalize(vNormal - L*biTangent);
+            }
+            else
+            {
+                normalMap = normalize(vNormal + L*vTangent);
+            }
+        }
+        </script>
+ 
+    <script type="text/javascript" id="mainCode">
+ 
+ var
+	control,    
+	container, 
+    renderer, 
+    scene, 
+    camera, 
+    mesh, 
+    start = Date.now(),
+    fov = 30;
+ 
+window.addEventListener( 'load', function() {
+ 
+    container = document.getElementById( "container" );
+     
+    scene = new THREE.Scene();
+ 
+    camera = new THREE.PerspectiveCamera( 
+        fov, 
+        window.innerWidth / window.innerHeight, 
+        1, 
+        10000 );
+    camera.position.z = 100;
+    camera.target = new THREE.Vector3( 0, 0, 0 );
+ 
+    scene.add( camera );
+     
+    material = new THREE.ShaderMaterial( {
+        uniforms: { 
+			uDirX: {type: 'f', value:  0.0}, 
+			uDirY: {type: 'f', value:  0.0},
+            uShininess: {type: 'f', value:  30.0} 
+        },
+        vertexShader: document.getElementById( 'vertexShader' ).textContent,
+        fragmentShader: document.getElementById( 'fragmentShader' ).textContent  
+    } );
+     
+	var teapotSize = 15; 
+	var segments = 10;
+	geo = new THREE.TeapotGeometry(teapotSize, segments, true, true, true, true, true);
+	mesh = new THREE.Mesh(geo, material); 
+	scene.add( mesh );
+
+    control = new function() {
+        this.x = 0.5;
+        this.y = 0.0;
+        this.shininess = 30.0;
+    }
+	var gui = new dat.GUI();
+    gui.add(control, 'x', -1.0, 1.0);    
+    gui.add(control, 'y', -1.0, 1.0);    
+    gui.add(control, 'shininess', 1.0, 60.0);  
+   
+    renderer = new THREE.WebGLRenderer();
+    renderer.setSize( window.innerWidth, window.innerHeight );
+     
+    container.appendChild( renderer.domElement );
+	controls = new THREE.TrackballControls( camera, renderer.domElement );     
+    render();
+ 
+} );
+ 
+function render() {
+
+    material.uniforms.uDirX.value = control.x; 
+    material.uniforms.uDirY.value = control.y; 
+    material.uniforms.uShininess.value = control.shininess; 
+
+    // render
+    renderer.render( scene, camera );
+    requestAnimationFrame( render );
+    controls.update(); 
+}
+
+    </script>
+ 
+</html>
+
